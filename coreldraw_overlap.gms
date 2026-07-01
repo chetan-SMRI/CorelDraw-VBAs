@@ -372,10 +372,6 @@ Sub SMRI_AutoPanelPowerClips()
     Dim createdPanels As Long
     Dim horizontalLabelX As Double
     Dim horizontalLabelY As Double
-    Dim labelX As Double
-    Dim labelY As Double
-    Dim labelW As Double
-    Dim labelH As Double
 
     ActiveDocument.BeginCommandGroup "SMRI Auto Panel PowerClips"
 
@@ -425,9 +421,9 @@ Sub SMRI_AutoPanelPowerClips()
             hLabel.Text.Story.Size = 18
             hLabel.Text.Story.Font = "Arial"
             hLabel.Text.Story.Bold = True
+            hLabel.RotationCenterX = horizontalLabelX
+            hLabel.RotationCenterY = horizontalLabelY
             hLabel.Rotate 90
-            hLabel.GetBoundingBox labelX, labelY, labelW, labelH, True
-            hLabel.Move horizontalLabelX - labelX, horizontalLabelY - (labelY + labelH)
 
             currentSourceY = currentSourceY + panelH - overlap
             currentDestY = currentDestY + panelH + gap
