@@ -126,6 +126,52 @@ The macro simply launches:
 C:\SMRI\PanelMaker\SMRI.PanelMaker.exe
 ```
 
+## Create a CorelDRAW toolbar button
+
+For commercial use, the button should point to the launcher macro, not directly to the EXE. The macro keeps the CorelDRAW workflow simple and launches the installed EXE from `C:\SMRI\PanelMaker`.
+
+First make sure the launcher macro is installed and visible in CorelDRAW:
+
+1. Copy or import `Launcher\SMRI_PanelMaker_Launcher.bas`.
+2. Restart CorelDRAW.
+3. Confirm that this macro appears in the Scripts list:
+
+```text
+SMRI_RunPanelMaker
+```
+
+Then create the button:
+
+1. In CorelDRAW, go to `Tools > Options > Customization`.
+2. Open `Command Bars`.
+3. Click `New`.
+4. Name the toolbar:
+
+```text
+SMRI
+```
+
+5. Enable the checkbox next to the new `SMRI` toolbar so it is visible.
+6. In the same Customization window, open `Commands`.
+7. In the command category dropdown, choose `Macros`.
+8. Find the `SMRI_RunPanelMaker` macro.
+9. Drag it onto the `SMRI` toolbar.
+10. Optional: select the macro command, open its appearance/icon settings, and set the caption to:
+
+```text
+Panel Maker
+```
+
+After this, the user only clicks the `Panel Maker` toolbar button.
+
+For a customer installer, the EXE should still install to:
+
+```text
+C:\SMRI\PanelMaker\SMRI.PanelMaker.exe
+```
+
+The macro button remains stable because it always launches that path.
+
 ## Build installer
 
 Install Inno Setup, then compile:
