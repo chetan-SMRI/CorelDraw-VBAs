@@ -109,6 +109,16 @@ Private Sub CreateHorizontalTMarker(ByVal markerX As Double, ByVal edgeY As Doub
     CreateBlendMarker markerX, outerY, markerX + (alongDir * markerLen), outerY
 End Sub
 
+Private Sub CreateVerticalTMarker(ByVal edgeX As Double, ByVal markerY As Double, _
+    ByVal outsideDir As Double, ByVal alongDir As Double, ByVal markerLen As Double)
+
+    Dim outerX As Double
+    outerX = edgeX + (outsideDir * markerLen)
+
+    CreateBlendMarker edgeX, markerY, outerX, markerY
+    CreateBlendMarker outerX, markerY, outerX, markerY + (alongDir * markerLen)
+End Sub
+
 Private Sub AddVerticalPanelSeamMarkers(ByVal seamX As Double, ByVal startY As Double, ByVal panelH As Double, _
     ByVal alongDir As Double, ByVal markerLen As Double)
 
@@ -119,13 +129,13 @@ Private Sub AddVerticalPanelSeamMarkers(ByVal seamX As Double, ByVal startY As D
     End If
 End Sub
 
-Private Sub AddHorizontalEdgeMarkers(ByVal startX As Double, ByVal edgeY As Double, ByVal panelW As Double, _
-    ByVal outsideDir As Double, ByVal markerLen As Double)
+Private Sub AddHorizontalPanelSeamMarkers(ByVal startX As Double, ByVal seamY As Double, ByVal panelW As Double, _
+    ByVal alongDir As Double, ByVal markerLen As Double)
 
-    CreateHorizontalTMarker startX, edgeY, outsideDir, 1, markerLen
+    CreateVerticalTMarker startX, seamY, -1, alongDir, markerLen
 
     If panelW > 0 Then
-        CreateHorizontalTMarker startX + panelW, edgeY, outsideDir, -1, markerLen
+        CreateVerticalTMarker startX + panelW, seamY, 1, alongDir, markerLen
     End If
 End Sub
 
@@ -140,11 +150,11 @@ Private Sub AddBlendMarkers(ByVal destX As Double, ByVal destY As Double, ByVal 
 
     If horizontalCut Then
         If panelIndex > 0 Then
-            AddHorizontalEdgeMarkers destX, destY, panelW, -1, markerLen
+            AddHorizontalPanelSeamMarkers destX, destY, panelW, 1, markerLen
         End If
 
         If panelIndex < panelCount - 1 Then
-            AddHorizontalEdgeMarkers destX, destY + panelH, panelW, 1, markerLen
+            AddHorizontalPanelSeamMarkers destX, destY + panelH - markerLen, panelW, 1, markerLen
         End If
     Else
         If panelIndex > 0 Then
