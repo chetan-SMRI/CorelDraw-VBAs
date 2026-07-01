@@ -1,7 +1,6 @@
 Option Explicit
 
 Private Const BLEND_MARKER_LENGTH As Double = 1
-Private Const BLEND_MARKER_SPACING As Double = 36
 
 Private Function CeilD(ByVal x As Double) As Long
     If x <= Int(x) Then
@@ -95,39 +94,48 @@ Private Sub CreateBlendMarker(ByVal x1 As Double, ByVal y1 As Double, ByVal x2 A
     marker.Outline.Width = 0.01
 End Sub
 
+Private Function IsYes(ByVal valueText As String) As Boolean
+    valueText = UCase$(Trim$(valueText))
+    IsYes = (valueText = "Y" Or valueText = "YES" Or valueText = "1")
+End Function
+
+Private Sub CreateVerticalTMarker(ByVal edgeX As Double, ByVal markerY As Double, _
+    ByVal outsideDir As Double, ByVal alongDir As Double, ByVal markerLen As Double)
+
+    Dim outerX As Double
+    outerX = edgeX + (outsideDir * markerLen)
+
+    CreateBlendMarker edgeX, markerY, outerX, markerY
+    CreateBlendMarker outerX, markerY, outerX, markerY + (alongDir * markerLen)
+End Sub
+
+Private Sub CreateHorizontalTMarker(ByVal markerX As Double, ByVal edgeY As Double, _
+    ByVal outsideDir As Double, ByVal alongDir As Double, ByVal markerLen As Double)
+
+    Dim outerY As Double
+    outerY = edgeY + (outsideDir * markerLen)
+
+    CreateBlendMarker markerX, edgeY, markerX, outerY
+    CreateBlendMarker markerX, outerY, markerX + (alongDir * markerLen), outerY
+End Sub
+
 Private Sub AddVerticalEdgeMarkers(ByVal edgeX As Double, ByVal startY As Double, ByVal panelH As Double, _
-    ByVal markerDir As Double, ByVal markerLen As Double)
+    ByVal outsideDir As Double, ByVal markerLen As Double)
 
-    Dim pos As Double
-
-    CreateBlendMarker edgeX, startY, edgeX + (markerDir * markerLen), startY
-
-    pos = BLEND_MARKER_SPACING
-    Do While pos < panelH
-        CreateBlendMarker edgeX, startY + pos, edgeX + (markerDir * markerLen), startY + pos
-        pos = pos + BLEND_MARKER_SPACING
-    Loop
+    CreateVerticalTMarker edgeX, startY, outsideDir, 1, markerLen
 
     If panelH > 0 Then
-        CreateBlendMarker edgeX, startY + panelH, edgeX + (markerDir * markerLen), startY + panelH
+        CreateVerticalTMarker edgeX, startY + panelH, outsideDir, -1, markerLen
     End If
 End Sub
 
 Private Sub AddHorizontalEdgeMarkers(ByVal startX As Double, ByVal edgeY As Double, ByVal panelW As Double, _
-    ByVal markerDir As Double, ByVal markerLen As Double)
+    ByVal outsideDir As Double, ByVal markerLen As Double)
 
-    Dim pos As Double
-
-    CreateBlendMarker startX, edgeY, startX, edgeY + (markerDir * markerLen)
-
-    pos = BLEND_MARKER_SPACING
-    Do While pos < panelW
-        CreateBlendMarker startX + pos, edgeY, startX + pos, edgeY + (markerDir * markerLen)
-        pos = pos + BLEND_MARKER_SPACING
-    Loop
+    CreateHorizontalTMarker startX, edgeY, outsideDir, 1, markerLen
 
     If panelW > 0 Then
-        CreateBlendMarker startX + panelW, edgeY, startX + panelW, edgeY + (markerDir * markerLen)
+        CreateHorizontalTMarker startX + panelW, edgeY, outsideDir, -1, markerLen
     End If
 End Sub
 
@@ -142,19 +150,19 @@ Private Sub AddBlendMarkers(ByVal destX As Double, ByVal destY As Double, ByVal 
 
     If horizontalCut Then
         If panelIndex > 0 Then
-            AddHorizontalEdgeMarkers destX, destY, panelW, 1, markerLen
+            AddHorizontalEdgeMarkers destX, destY, panelW, -1, markerLen
         End If
 
         If panelIndex < panelCount - 1 Then
-            AddHorizontalEdgeMarkers destX, destY + panelH, panelW, -1, markerLen
+            AddHorizontalEdgeMarkers destX, destY + panelH, panelW, 1, markerLen
         End If
     Else
         If panelIndex > 0 Then
-            AddVerticalEdgeMarkers destX, destY, panelH, 1, markerLen
+            AddVerticalEdgeMarkers destX, destY, panelH, -1, markerLen
         End If
 
         If panelIndex < panelCount - 1 Then
-            AddVerticalEdgeMarkers destX + panelW, destY, panelH, -1, markerLen
+            AddVerticalEdgeMarkers destX + panelW, destY, panelH, 1, markerLen
         End If
     End If
 End Sub
@@ -370,7 +378,9 @@ Sub SMRI_AutoPanelPowerClips()
     Dim mediaText As String
     Dim directionText As String
     Dim overlapText As String
+    Dim markerText As String
     Dim horizontalCut As Boolean
+    Dim addBleedMarkers As Boolean
     Dim mediaCount As Long
     Dim overlap As Double
     Dim gap As Double
@@ -409,6 +419,13 @@ Sub SMRI_AutoPanelPowerClips()
         ActiveDocument.Unit = oldUnit
         Exit Sub
     End If
+
+    markerText = InputBox("Add outside bleeding / overlap markers? Y/N", "SMRI Panel Maker", "Y")
+    If Trim$(markerText) = "" Then
+        ActiveDocument.Unit = oldUnit
+        Exit Sub
+    End If
+    addBleedMarkers = IsYes(markerText)
 
     Dim src As ShapeRange
     Set src = ActiveSelectionRange
@@ -491,7 +508,9 @@ Sub SMRI_AutoPanelPowerClips()
             hDup.Move destX - x, destY - panelTop
 
             hDup.AddToPowerClip hBox, cdrFalse
-            AddBlendMarkers destX, destY, w, panelH, i, panels, True, overlap
+            If addBleedMarkers Then
+                AddBlendMarkers destX, destY, w, panelH, i, panels, True, overlap
+            End If
 
             Dim hLabel As Shape
             horizontalLabelX = destX - 0.35
@@ -534,7 +553,9 @@ Sub SMRI_AutoPanelPowerClips()
             dup.Move destX - panelLeft, startY - y
 
             dup.AddToPowerClip box, cdrFalse
-            AddBlendMarkers destX, startY, panelW, h, i, panels, False, overlap
+            If addBleedMarkers Then
+                AddBlendMarkers destX, startY, panelW, h, i, panels, False, overlap
+            End If
 
             Dim label As Shape
             Set label = ActiveLayer.CreateArtisticText(destX, startY + h + 0.04, _
