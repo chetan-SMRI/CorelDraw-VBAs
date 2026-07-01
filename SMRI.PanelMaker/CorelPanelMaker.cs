@@ -15,6 +15,7 @@ namespace SMRI.PanelMaker
         private const int CdrInch = 1;
         private const bool CdrFalse = false;
         private const double Gap = 1.0;
+        private const double BlendMarkerLength = 1.0;
 
         public void Run()
         {
@@ -41,19 +42,33 @@ namespace SMRI.PanelMaker
                 return;
             }
 
+            bool? horizontalCutValue = PromptForDirection();
+            if (!horizontalCutValue.HasValue)
+            {
+                return;
+            }
+
             double? overlapValue = PromptForOverlap(mediaWidths[0]);
             if (!overlapValue.HasValue)
             {
                 return;
             }
 
+            bool? addBleedMarkersValue = PromptForBleedMarkers();
+            if (!addBleedMarkersValue.HasValue)
+            {
+                return;
+            }
+
+            bool horizontalCut = horizontalCutValue.Value;
             double overlap = overlapValue.Value;
+            bool addBleedMarkers = addBleedMarkersValue.Value;
             object oldUnit = document.Unit;
 
             try
             {
                 document.Unit = CdrInch;
-                CreatePanels(document, selection, mediaWidths, overlap);
+                CreatePanels(document, selection, mediaWidths, overlap, horizontalCut, addBleedMarkers);
             }
             finally
             {
@@ -61,7 +76,7 @@ namespace SMRI.PanelMaker
             }
         }
 
-        private static void CreatePanels(dynamic document, dynamic source, double[] mediaWidths, double overlap)
+        private static void CreatePanels(dynamic document, dynamic source, double[] mediaWidths, double overlap, bool horizontalCut, bool addBleedMarkers)
         {
             double x = 0;
             double y = 0;
@@ -69,8 +84,9 @@ namespace SMRI.PanelMaker
             double height = 0;
             source.GetBoundingBox(ref x, ref y, ref width, ref height, true);
 
+            double artworkSpan = horizontalCut ? height : width;
             double[] panelWidths;
-            if (!BuildPanelSuggestions(width, mediaWidths, overlap, out panelWidths))
+            if (!BuildPanelSuggestions(artworkSpan, mediaWidths, overlap, out panelWidths))
             {
                 MessageBox.Show("Could not build panel suggestions from the entered media widths.", "SMRI Panel Maker",
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
@@ -80,7 +96,9 @@ namespace SMRI.PanelMaker
             double startX = x;
             double startY = y - height - Gap;
             double currentSourceX = x;
+            double currentSourceY = y;
             double currentDestX = startX;
+            double currentDestY = y;
             int createdPanels = 0;
             var suggestionText = new System.Text.StringBuilder();
             suggestionText.AppendLine("Panel suggestions:");
@@ -92,43 +110,102 @@ namespace SMRI.PanelMaker
             {
                 for (int i = 0; i < panelWidths.Length; i++)
                 {
-                    double panelLeft = currentSourceX;
-                    double panelWidth = panelWidths[i];
-                    double remainingWidth = (x + width) - panelLeft;
-                    if (panelWidth > remainingWidth)
+                    if (horizontalCut)
                     {
-                        panelWidth = remainingWidth;
-                    }
+                        double panelTop = currentSourceY;
+                        double panelHeight = panelWidths[i];
+                        double remainingHeight = (y + height) - panelTop;
+                        if (panelHeight > remainingHeight)
+                        {
+                            panelHeight = remainingHeight;
+                        }
 
-                    if (panelWidth <= 0)
+                        if (panelHeight <= 0)
+                        {
+                            break;
+                        }
+
+                        double destX = x + width + Gap;
+                        double destY = currentDestY;
+                        createdPanels++;
+                        suggestionText.AppendLine("Panel " + (i + 1) + " " + FormatInches(panelHeight) + "\"");
+
+                        dynamic box = activeLayer.CreateRectangle2(destX, destY, width, panelHeight);
+                        box.Name = "Panel_" + (i + 1).ToString("00", CultureInfo.InvariantCulture);
+                        box.Fill.ApplyNoFill();
+                        box.Outline.Width = 0.01;
+
+                        dynamic duplicate = source.Duplicate();
+                        duplicate.Move(destX - x, destY - panelTop);
+                        duplicate.AddToPowerClip(box, CdrFalse);
+
+                        if (addBleedMarkers)
+                        {
+                            AddBlendMarkers(activeLayer, destX, destY, width, panelHeight, i, panelWidths.Length, true, overlap);
+                        }
+
+                        double horizontalLabelX = destX - 0.35;
+                        double horizontalLabelY = destY;
+                        dynamic label = activeLayer.CreateArtisticText(horizontalLabelX, horizontalLabelY,
+                            "Tile " + (i + 1) +
+                            " | Total Height: " + FormatInches(height) + "\"" +
+                            " | Panel Height: " + FormatInches(panelHeight) + "\"");
+
+                        label.Text.Story.Size = 18;
+                        label.Text.Story.Font = "Arial";
+                        label.Text.Story.Bold = true;
+                        label.RotationCenterX = horizontalLabelX;
+                        label.RotationCenterY = horizontalLabelY;
+                        label.Rotate(90);
+
+                        currentSourceY += panelHeight - overlap;
+                        currentDestY += panelHeight + Gap;
+                    }
+                    else
                     {
-                        break;
+                        double panelLeft = currentSourceX;
+                        double panelWidth = panelWidths[i];
+                        double remainingWidth = (x + width) - panelLeft;
+                        if (panelWidth > remainingWidth)
+                        {
+                            panelWidth = remainingWidth;
+                        }
+
+                        if (panelWidth <= 0)
+                        {
+                            break;
+                        }
+
+                        double destX = currentDestX;
+                        createdPanels++;
+                        suggestionText.AppendLine("Panel " + (i + 1) + " " + FormatInches(panelWidth) + "\"");
+
+                        dynamic box = activeLayer.CreateRectangle2(destX, startY, panelWidth, height);
+                        box.Name = "Panel_" + (i + 1).ToString("00", CultureInfo.InvariantCulture);
+                        box.Fill.ApplyNoFill();
+                        box.Outline.Width = 0.01;
+
+                        dynamic duplicate = source.Duplicate();
+                        duplicate.Move(destX - panelLeft, startY - y);
+                        duplicate.AddToPowerClip(box, CdrFalse);
+
+                        if (addBleedMarkers)
+                        {
+                            AddBlendMarkers(activeLayer, destX, startY, panelWidth, height, i, panelWidths.Length, false, overlap);
+                        }
+
+                        dynamic label = activeLayer.CreateArtisticText(destX, startY + height + 0.14,
+                            "Tile " + (i + 1) +
+                            " | Total Width: " + FormatInches(width) + "\"" +
+                            " | Panel Width: " + FormatInches(panelWidth) + "\"");
+
+                        label.Text.Story.Size = 18;
+                        label.Text.Story.Font = "Arial";
+                        label.Text.Story.Bold = true;
+
+                        currentSourceX += panelWidth - overlap;
+                        currentDestX += panelWidth + Gap;
                     }
-
-                    double destX = currentDestX;
-                    createdPanels++;
-                    suggestionText.AppendLine("Panel " + (i + 1) + " " + FormatInches(panelWidth) + "\"");
-
-                    dynamic box = activeLayer.CreateRectangle2(destX, startY, panelWidth, height);
-                    box.Name = "Panel_" + (i + 1).ToString("00", CultureInfo.InvariantCulture);
-                    box.Fill.ApplyNoFill();
-                    box.Outline.Width = 0.01;
-
-                    dynamic duplicate = source.Duplicate();
-                    duplicate.Move(destX - panelLeft, startY - y);
-                    duplicate.AddToPowerClip(box, CdrFalse);
-
-                    dynamic label = activeLayer.CreateArtisticText(destX, startY + height + 0.04,
-                        "Tile " + (i + 1) +
-                        " | Total Width: " + FormatInches(width) + "\"" +
-                        " | Panel Width: " + FormatInches(panelWidth) + "\"");
-
-                    label.Text.Story.Size = 18;
-                    label.Text.Story.Font = "Arial";
-                    label.Text.Story.Bold = true;
-
-                    currentSourceX += panelWidth - overlap;
-                    currentDestX += panelWidth + Gap;
                 }
             }
             finally
@@ -297,10 +374,11 @@ namespace SMRI.PanelMaker
 
         private static double[] PromptForMediaWidths()
         {
-            string mediaText = Interaction.InputBox(
-                "Enter available media widths in inches, separated by commas:",
-                "SMRI Panel Maker",
-                "39,49,59");
+            string mediaText = PromptForMediaText();
+            if (mediaText == null)
+            {
+                return null;
+            }
 
             double[] mediaWidths;
             if (!TryParseMediaWidths(mediaText, out mediaWidths))
@@ -311,6 +389,88 @@ namespace SMRI.PanelMaker
             }
 
             return mediaWidths;
+        }
+
+        private static string PromptForMediaText()
+        {
+            while (true)
+            {
+                string presetChoice = Interaction.InputBox(PresetMenuText(), "SMRI Panel Maker", "1");
+                if (string.IsNullOrWhiteSpace(presetChoice))
+                {
+                    return null;
+                }
+
+                string choice = presetChoice.Trim().ToUpperInvariant();
+                if (choice == "C" || choice == "CUSTOM")
+                {
+                    string custom = Interaction.InputBox("Enter available media widths in inches, separated by commas:",
+                        "SMRI Panel Maker", "39,49,59");
+                    return string.IsNullOrWhiteSpace(custom) ? null : custom;
+                }
+
+                if (choice == "N" || choice == "NEW")
+                {
+                    int slot = Convert.ToInt32(Val(Interaction.InputBox("Save preset to slot number 1-5:",
+                        "SMRI Panel Maker", "1")));
+                    if (slot < 1 || slot > 5)
+                    {
+                        MessageBox.Show("Please choose a slot from 1 to 5.", "SMRI Panel Maker",
+                            MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        continue;
+                    }
+
+                    string presetName = Interaction.InputBox("Preset name:", "SMRI Panel Maker", "My Preset");
+                    if (string.IsNullOrWhiteSpace(presetName))
+                    {
+                        return null;
+                    }
+
+                    string presetWidths = Interaction.InputBox("Preset widths in inches, separated by commas:",
+                        "SMRI Panel Maker", "39,49,59");
+                    if (string.IsNullOrWhiteSpace(presetWidths))
+                    {
+                        return null;
+                    }
+
+                    SavePreset(slot, presetName.Trim(), presetWidths.Trim());
+                    return presetWidths;
+                }
+
+                int presetSlot = Convert.ToInt32(Val(choice));
+                if (presetSlot >= 1 && presetSlot <= 5)
+                {
+                    string savedWidths = LoadPresetWidths(presetSlot);
+                    if (string.IsNullOrWhiteSpace(savedWidths))
+                    {
+                        MessageBox.Show("That preset slot is empty. Create a preset first or choose Custom.",
+                            "SMRI Panel Maker", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        continue;
+                    }
+
+                    return savedWidths;
+                }
+
+                MessageBox.Show("Choose preset 1-5, N for new preset, or C for custom.",
+                    "SMRI Panel Maker", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+        }
+
+        private static bool? PromptForDirection()
+        {
+            string directionText = Interaction.InputBox(
+                "Choose cut direction:" + Environment.NewLine +
+                "V = Vertical panels, split by artwork width" + Environment.NewLine +
+                "H = Horizontal panels, split by artwork height",
+                "SMRI Panel Maker",
+                "V");
+
+            if (string.IsNullOrWhiteSpace(directionText))
+            {
+                return null;
+            }
+
+            return IsHorizontalCut(directionText);
         }
 
         private static double? PromptForOverlap(double smallestMediaWidth)
@@ -338,6 +498,18 @@ namespace SMRI.PanelMaker
             }
 
             return overlap;
+        }
+
+        private static bool? PromptForBleedMarkers()
+        {
+            string markerText = Interaction.InputBox("Add outside bleeding / overlap markers? Y/N",
+                "SMRI Panel Maker", "Y");
+            if (string.IsNullOrWhiteSpace(markerText))
+            {
+                return null;
+            }
+
+            return IsYes(markerText);
         }
 
         private static bool TryParseMediaWidths(string widthText, out double[] mediaWidths)
@@ -385,6 +557,111 @@ namespace SMRI.PanelMaker
             return true;
         }
 
+        private static string PresetMenuText()
+        {
+            var text = new System.Text.StringBuilder();
+            text.AppendLine("Choose width preset:");
+            for (int slot = 1; slot <= 5; slot++)
+            {
+                text.AppendLine(SavedPresetLabel(slot));
+            }
+
+            text.AppendLine("N = Create / update preset");
+            text.Append("C = Custom one-time widths");
+            return text.ToString();
+        }
+
+        private static string SavedPresetLabel(int slot)
+        {
+            string presetName = GetPresetValue(slot, "Name");
+            string presetWidths = GetPresetValue(slot, "Widths");
+
+            if (string.IsNullOrWhiteSpace(presetName))
+            {
+                presetName = "Preset " + slot.ToString(CultureInfo.InvariantCulture);
+            }
+
+            return string.IsNullOrWhiteSpace(presetWidths)
+                ? slot.ToString(CultureInfo.InvariantCulture) + " = " + presetName + " (empty)"
+                : slot.ToString(CultureInfo.InvariantCulture) + " = " + presetName + " (" + presetWidths + ")";
+        }
+
+        private static string LoadPresetWidths(int slot)
+        {
+            return GetPresetValue(slot, "Widths");
+        }
+
+        private static void SavePreset(int slot, string presetName, string presetWidths)
+        {
+            using (RegistryKey key = Registry.CurrentUser.CreateSubKey(@"Software\VB and VBA Program Settings\SMRI\PanelMaker"))
+            {
+                key.SetValue("Preset" + slot.ToString(CultureInfo.InvariantCulture) + "Name", presetName);
+                key.SetValue("Preset" + slot.ToString(CultureInfo.InvariantCulture) + "Widths", presetWidths);
+            }
+        }
+
+        private static string GetPresetValue(int slot, string suffix)
+        {
+            try
+            {
+                using (RegistryKey key = Registry.CurrentUser.OpenSubKey(@"Software\VB and VBA Program Settings\SMRI\PanelMaker"))
+                {
+                    object value = key != null
+                        ? key.GetValue("Preset" + slot.ToString(CultureInfo.InvariantCulture) + suffix)
+                        : null;
+                    return value != null ? value.ToString() : "";
+                }
+            }
+            catch
+            {
+                return "";
+            }
+        }
+
+        private static bool IsHorizontalCut(string directionText)
+        {
+            string value = directionText.Trim().ToUpperInvariant();
+            return value == "H" || value == "2" || value == "HORIZONTAL";
+        }
+
+        private static bool IsYes(string valueText)
+        {
+            string value = valueText.Trim().ToUpperInvariant();
+            return value == "Y" || value == "YES" || value == "1";
+        }
+
+        private static double Val(string text)
+        {
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                return 0;
+            }
+
+            string trimmed = text.Trim();
+            int length = 0;
+            while (length < trimmed.Length)
+            {
+                char c = trimmed[length];
+                if (!(char.IsDigit(c) || c == '-' || c == '+' || c == '.' || c == ','))
+                {
+                    break;
+                }
+
+                length++;
+            }
+
+            if (length == 0)
+            {
+                return 0;
+            }
+
+            double value;
+            return double.TryParse(trimmed.Substring(0, length), NumberStyles.Float, CultureInfo.CurrentCulture, out value) ||
+                   double.TryParse(trimmed.Substring(0, length), NumberStyles.Float, CultureInfo.InvariantCulture, out value)
+                ? value
+                : 0;
+        }
+
         private static bool BuildPanelSuggestions(double artworkWidth, double[] mediaWidths, double overlap, out double[] panelWidths)
         {
             panelWidths = null;
@@ -430,6 +707,93 @@ namespace SMRI.PanelMaker
             }
 
             return false;
+        }
+
+        private static double MarkerLength(double overlap)
+        {
+            return overlap > 0 && overlap < BlendMarkerLength
+                ? overlap
+                : BlendMarkerLength;
+        }
+
+        private static void CreateBlendMarker(dynamic activeLayer, double x1, double y1, double x2, double y2)
+        {
+            dynamic marker = activeLayer.CreateLineSegment(x1, y1, x2, y2);
+            marker.Name = "Blend_Marker";
+            marker.Outline.Width = 0.01;
+        }
+
+        private static void CreateHorizontalTMarker(dynamic activeLayer, double markerX, double edgeY,
+            double outsideDir, double alongDir, double markerLen)
+        {
+            double outerY = edgeY + (outsideDir * markerLen);
+            CreateBlendMarker(activeLayer, markerX, edgeY, markerX, outerY);
+            CreateBlendMarker(activeLayer, markerX, outerY, markerX + (alongDir * markerLen), outerY);
+        }
+
+        private static void CreateVerticalTMarker(dynamic activeLayer, double edgeX, double markerY,
+            double outsideDir, double alongDir, double markerLen)
+        {
+            double outerX = edgeX + (outsideDir * markerLen);
+            CreateBlendMarker(activeLayer, edgeX, markerY, outerX, markerY);
+            CreateBlendMarker(activeLayer, outerX, markerY, outerX, markerY + (alongDir * markerLen));
+        }
+
+        private static void AddVerticalPanelSeamMarkers(dynamic activeLayer, double seamX, double startY,
+            double panelHeight, double alongDir, double markerLen)
+        {
+            CreateHorizontalTMarker(activeLayer, seamX, startY, -1, alongDir, markerLen);
+
+            if (panelHeight > 0)
+            {
+                CreateHorizontalTMarker(activeLayer, seamX, startY + panelHeight, 1, alongDir, markerLen);
+            }
+        }
+
+        private static void AddHorizontalPanelSeamMarkers(dynamic activeLayer, double startX, double seamY,
+            double panelWidth, double alongDir, double markerLen)
+        {
+            CreateVerticalTMarker(activeLayer, startX, seamY, -1, alongDir, markerLen);
+
+            if (panelWidth > 0)
+            {
+                CreateVerticalTMarker(activeLayer, startX + panelWidth, seamY, 1, alongDir, markerLen);
+            }
+        }
+
+        private static void AddBlendMarkers(dynamic activeLayer, double destX, double destY, double panelWidth,
+            double panelHeight, int panelIndex, int panelCount, bool horizontalCut, double overlap)
+        {
+            double markerLen = MarkerLength(overlap);
+            if (markerLen <= 0)
+            {
+                return;
+            }
+
+            if (horizontalCut)
+            {
+                if (panelIndex > 0)
+                {
+                    AddHorizontalPanelSeamMarkers(activeLayer, destX, destY, panelWidth, 1, markerLen);
+                }
+
+                if (panelIndex < panelCount - 1)
+                {
+                    AddHorizontalPanelSeamMarkers(activeLayer, destX, destY + panelHeight - markerLen, panelWidth, 1, markerLen);
+                }
+            }
+            else
+            {
+                if (panelIndex > 0)
+                {
+                    AddVerticalPanelSeamMarkers(activeLayer, destX, destY, panelHeight, 1, markerLen);
+                }
+
+                if (panelIndex < panelCount - 1)
+                {
+                    AddVerticalPanelSeamMarkers(activeLayer, destX + panelWidth - markerLen, destY, panelHeight, 1, markerLen);
+                }
+            }
         }
 
         private static void FindBestCounts(

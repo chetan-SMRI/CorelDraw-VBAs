@@ -74,7 +74,8 @@ C:\SMRI\PanelMaker\SMRI.PanelMaker.exe
 ```
 
 7. On first run, enter the license key.
-8. Enter media widths and overlap when prompted.
+8. Choose a saved width preset, create/update a preset, or enter one-time custom widths.
+9. Choose vertical or horizontal cuts, enter overlap, and choose whether to add outside bleeding/overlap markers.
 
 Activation is saved to:
 
