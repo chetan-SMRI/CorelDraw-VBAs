@@ -5,27 +5,33 @@ This project is a simple .NET Framework 4.8 Windows EXE that connects to the cur
 ## Before building
 
 1. Open `SMRI.PanelMaker\App.config`.
-2. Replace `https://your-server.example.com/api/activate` with your real activation API URL.
-3. The API must accept this JSON:
+2. The license API URL is configured as:
+
+```text
+https://shrimayanand.com/api/method/cdr-activator?machineId=123&licenseKey=chetan@123
+```
+
+The EXE replaces the sample query values at runtime with the real generated `machineId` and entered `licenseKey`, then sends a POST request.
+
+3. On invalid license, the API can return:
+
+```json
+{}
+```
+
+4. On valid license, the API should return:
 
 ```json
 {
-  "licenseKey": "customer-key",
-  "machineId": "sha256-machine-id"
+  "message": {
+    "valid": true,
+    "message": "Activated",
+    "activationToken": "abcdefghijklf"
+  }
 }
 ```
 
-4. The API should return this JSON:
-
-```json
-{
-  "valid": true,
-  "message": "Activated",
-  "activationToken": "server-generated-token"
-}
-```
-
-If `valid` is `false`, the EXE stops before touching CorelDRAW.
+If the nested `message.valid` is not `true`, the EXE stops before touching CorelDRAW.
 
 ## Build
 

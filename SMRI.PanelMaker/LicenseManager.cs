@@ -65,37 +65,25 @@ namespace SMRI.PanelMaker
         private static ActivationResponse ActivateLicense(string licenseKey, string machineId)
         {
             string apiUrl = ConfigurationManager.AppSettings["LicenseApiUrl"];
-            if (string.IsNullOrWhiteSpace(apiUrl) || apiUrl.Contains("your-server.example.com"))
+            if (string.IsNullOrWhiteSpace(apiUrl))
             {
                 throw new InvalidOperationException("Set LicenseApiUrl in App.config before distributing SMRI Panel Maker.");
             }
 
             ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
 
-            byte[] payload = ToJsonBytes(new ActivationRequest
-            {
-                LicenseKey = licenseKey,
-                MachineId = machineId
-            });
-
-            var request = (HttpWebRequest)WebRequest.Create(apiUrl);
+            var request = (HttpWebRequest)WebRequest.Create(BuildActivationUrl(apiUrl, licenseKey, machineId));
             request.Method = "POST";
-            request.ContentType = "application/json";
             request.Accept = "application/json";
             request.Timeout = 30000;
-            request.ContentLength = payload.Length;
-
-            using (Stream stream = request.GetRequestStream())
-            {
-                stream.Write(payload, 0, payload.Length);
-            }
+            request.ContentLength = 0;
 
             try
             {
                 using (var response = (HttpWebResponse)request.GetResponse())
                 using (Stream stream = response.GetResponseStream())
                 {
-                    return ReadJson<ActivationResponse>(stream);
+                    return ReadActivationResponse(stream);
                 }
             }
             catch (WebException ex)
@@ -107,10 +95,45 @@ namespace SMRI.PanelMaker
 
                 using (Stream stream = ex.Response.GetResponseStream())
                 {
-                    ActivationResponse response = ReadJson<ActivationResponse>(stream);
+                    ActivationResponse response = ReadActivationResponse(stream);
                     return response ?? new ActivationResponse { Valid = false, Message = "License activation failed." };
                 }
             }
+        }
+
+        private static string BuildActivationUrl(string configuredUrl, string licenseKey, string machineId)
+        {
+            int queryStart = configuredUrl.IndexOf('?');
+            string baseUrl = queryStart >= 0 ? configuredUrl.Substring(0, queryStart) : configuredUrl;
+            string separator = baseUrl.Contains("?") ? "&" : "?";
+
+            return baseUrl + separator +
+                "machineId=" + Uri.EscapeDataString(machineId) +
+                "&licenseKey=" + Uri.EscapeDataString(licenseKey);
+        }
+
+        private static ActivationResponse ReadActivationResponse(Stream stream)
+        {
+            ActivationEnvelope envelope;
+            try
+            {
+                envelope = ReadJson<ActivationEnvelope>(stream);
+            }
+            catch (SerializationException)
+            {
+                envelope = null;
+            }
+
+            if (envelope == null || envelope.Message == null)
+            {
+                return new ActivationResponse
+                {
+                    Valid = false,
+                    Message = "Invalid license key."
+                };
+            }
+
+            return envelope.Message;
         }
 
         private static ActivationFile ReadActivationFile()
@@ -167,15 +190,6 @@ namespace SMRI.PanelMaker
             }
         }
 
-        private static byte[] ToJsonBytes<T>(T value)
-        {
-            using (var stream = new MemoryStream())
-            {
-                WriteJson(stream, value);
-                return stream.ToArray();
-            }
-        }
-
         private static T ReadJson<T>(Stream stream) where T : class
         {
             if (stream == null)
@@ -202,13 +216,10 @@ namespace SMRI.PanelMaker
         }
 
         [DataContract]
-        private sealed class ActivationRequest
+        private sealed class ActivationEnvelope
         {
-            [DataMember(Name = "licenseKey")]
-            public string LicenseKey { get; set; }
-
-            [DataMember(Name = "machineId")]
-            public string MachineId { get; set; }
+            [DataMember(Name = "message")]
+            public ActivationResponse Message { get; set; }
         }
 
         [DataContract]
