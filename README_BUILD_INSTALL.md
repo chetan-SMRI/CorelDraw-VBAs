@@ -90,6 +90,8 @@ If the error continues, CorelDRAW's COM automation registration may be missing o
 C:\ProgramData\SMRI\PanelMaker\coreldraw-com-diagnostic.txt
 ```
 
+If panel widths show values like `4572` for artwork that should be `180` inches, rebuild and copy the latest EXE. That means the old EXE was using CorelDRAW's millimeter unit value instead of inches.
+
 ## Add CorelDRAW launcher macro manually
 
 Use this while testing before you build the installer.

@@ -12,7 +12,7 @@ namespace SMRI.PanelMaker
 {
     internal sealed class CorelPanelMaker
     {
-        private const int CdrInch = 3;
+        private const int CdrInch = 1;
         private const bool CdrFalse = false;
         private const double Gap = 1.0;
 
