@@ -427,7 +427,7 @@ Sub SMRI_AutoPanelPowerClips()
             hLabel.Text.Story.Bold = True
             hLabel.Rotate 90
             hLabel.GetBoundingBox labelX, labelY, labelW, labelH, True
-            hLabel.Move horizontalLabelX - labelX, horizontalLabelY - labelY
+            hLabel.Move horizontalLabelX - labelX, horizontalLabelY - (labelY + labelH)
 
             currentSourceY = currentSourceY + panelH - overlap
             currentDestY = currentDestY + panelH + gap
