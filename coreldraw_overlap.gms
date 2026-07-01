@@ -1,5 +1,8 @@
 Option Explicit
 
+Private Const BLEND_MARKER_LENGTH As Double = 1
+Private Const BLEND_MARKER_SPACING As Double = 36
+
 Private Function CeilD(ByVal x As Double) As Long
     If x <= Int(x) Then
         CeilD = CLng(Int(x))
@@ -76,6 +79,85 @@ Private Function IsHorizontalCut(ByVal directionText As String) As Boolean
     directionText = UCase$(Trim$(directionText))
     IsHorizontalCut = (directionText = "H" Or directionText = "2" Or directionText = "HORIZONTAL")
 End Function
+
+Private Function MarkerLength(ByVal overlap As Double) As Double
+    If overlap > 0 And overlap < BLEND_MARKER_LENGTH Then
+        MarkerLength = overlap
+    Else
+        MarkerLength = BLEND_MARKER_LENGTH
+    End If
+End Function
+
+Private Sub CreateBlendMarker(ByVal x1 As Double, ByVal y1 As Double, ByVal x2 As Double, ByVal y2 As Double)
+    Dim marker As Shape
+    Set marker = ActiveLayer.CreateLineSegment(x1, y1, x2, y2)
+    marker.Name = "Blend_Marker"
+    marker.Outline.Width = 0.01
+End Sub
+
+Private Sub AddVerticalEdgeMarkers(ByVal edgeX As Double, ByVal startY As Double, ByVal panelH As Double, _
+    ByVal markerDir As Double, ByVal markerLen As Double)
+
+    Dim pos As Double
+
+    CreateBlendMarker edgeX, startY, edgeX + (markerDir * markerLen), startY
+
+    pos = BLEND_MARKER_SPACING
+    Do While pos < panelH
+        CreateBlendMarker edgeX, startY + pos, edgeX + (markerDir * markerLen), startY + pos
+        pos = pos + BLEND_MARKER_SPACING
+    Loop
+
+    If panelH > 0 Then
+        CreateBlendMarker edgeX, startY + panelH, edgeX + (markerDir * markerLen), startY + panelH
+    End If
+End Sub
+
+Private Sub AddHorizontalEdgeMarkers(ByVal startX As Double, ByVal edgeY As Double, ByVal panelW As Double, _
+    ByVal markerDir As Double, ByVal markerLen As Double)
+
+    Dim pos As Double
+
+    CreateBlendMarker startX, edgeY, startX, edgeY + (markerDir * markerLen)
+
+    pos = BLEND_MARKER_SPACING
+    Do While pos < panelW
+        CreateBlendMarker startX + pos, edgeY, startX + pos, edgeY + (markerDir * markerLen)
+        pos = pos + BLEND_MARKER_SPACING
+    Loop
+
+    If panelW > 0 Then
+        CreateBlendMarker startX + panelW, edgeY, startX + panelW, edgeY + (markerDir * markerLen)
+    End If
+End Sub
+
+Private Sub AddBlendMarkers(ByVal destX As Double, ByVal destY As Double, ByVal panelW As Double, _
+    ByVal panelH As Double, ByVal panelIndex As Long, ByVal panelCount As Long, _
+    ByVal horizontalCut As Boolean, ByVal overlap As Double)
+
+    Dim markerLen As Double
+    markerLen = MarkerLength(overlap)
+
+    If markerLen <= 0 Then Exit Sub
+
+    If horizontalCut Then
+        If panelIndex > 0 Then
+            AddHorizontalEdgeMarkers destX, destY, panelW, 1, markerLen
+        End If
+
+        If panelIndex < panelCount - 1 Then
+            AddHorizontalEdgeMarkers destX, destY + panelH, panelW, -1, markerLen
+        End If
+    Else
+        If panelIndex > 0 Then
+            AddVerticalEdgeMarkers destX, destY, panelH, 1, markerLen
+        End If
+
+        If panelIndex < panelCount - 1 Then
+            AddVerticalEdgeMarkers destX + panelW, destY, panelH, -1, markerLen
+        End If
+    End If
+End Sub
 
 Private Function SavedPresetLabel(ByVal slot As Long) As String
     Dim presetName As String
@@ -409,6 +491,7 @@ Sub SMRI_AutoPanelPowerClips()
             hDup.Move destX - x, destY - panelTop
 
             hDup.AddToPowerClip hBox, cdrFalse
+            AddBlendMarkers destX, destY, w, panelH, i, panels, True, overlap
 
             Dim hLabel As Shape
             horizontalLabelX = destX - 0.35
@@ -451,6 +534,7 @@ Sub SMRI_AutoPanelPowerClips()
             dup.Move destX - panelLeft, startY - y
 
             dup.AddToPowerClip box, cdrFalse
+            AddBlendMarkers destX, startY, panelW, h, i, panels, False, overlap
 
             Dim label As Shape
             Set label = ActiveLayer.CreateArtisticText(destX, startY + h + 0.04, _
