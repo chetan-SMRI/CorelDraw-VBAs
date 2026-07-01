@@ -370,6 +370,8 @@ Sub SMRI_AutoPanelPowerClips()
     Dim currentDestY As Double
     Dim suggestionText As String
     Dim createdPanels As Long
+    Dim horizontalLabelX As Double
+    Dim horizontalLabelY As Double
 
     ActiveDocument.BeginCommandGroup "SMRI Auto Panel PowerClips"
 
@@ -409,7 +411,10 @@ Sub SMRI_AutoPanelPowerClips()
             hDup.AddToPowerClip hBox, cdrFalse
 
             Dim hLabel As Shape
-            Set hLabel = ActiveLayer.CreateArtisticText(destX - 0.04, destY, _
+            horizontalLabelX = destX - 0.35
+            horizontalLabelY = destY
+
+            Set hLabel = ActiveLayer.CreateArtisticText(horizontalLabelX, horizontalLabelY, _
                 "Tile " & (i + 1) & " | Total Height: " & FormatInches(h) & _
                 """ | Panel Height: " & FormatInches(panelH) & """")
 
@@ -417,6 +422,7 @@ Sub SMRI_AutoPanelPowerClips()
             hLabel.Text.Story.Font = "Arial"
             hLabel.Text.Story.Bold = True
             hLabel.Rotate 90
+            hLabel.SetPosition horizontalLabelX, horizontalLabelY
 
             currentSourceY = currentSourceY + panelH - overlap
             currentDestY = currentDestY + panelH + gap
