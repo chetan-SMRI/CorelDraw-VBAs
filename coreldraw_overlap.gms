@@ -72,28 +72,111 @@ InvalidWidth:
     ParseMediaWidths = False
 End Function
 
-Private Function GetPresetMediaText(ByVal presetChoice As String) As String
-    presetChoice = UCase$(Trim$(presetChoice))
-
-    Select Case presetChoice
-        Case "1", "F", "FLEX"
-            GetPresetMediaText = "36,39,48,49,60,72,84"
-        Case "2", "V", "VINYL"
-            GetPresetMediaText = "36,39,48,49,60"
-        Case "3", "S", "SAVED"
-            GetPresetMediaText = GetSetting("SMRI", "PanelMaker", "CustomMediaWidths", "")
-        Case Else
-            GetPresetMediaText = ""
-    End Select
-End Function
-
-Private Sub SaveCustomMediaText(ByVal mediaText As String)
-    SaveSetting "SMRI", "PanelMaker", "CustomMediaWidths", mediaText
-End Sub
-
 Private Function IsHorizontalCut(ByVal directionText As String) As Boolean
     directionText = UCase$(Trim$(directionText))
     IsHorizontalCut = (directionText = "H" Or directionText = "2" Or directionText = "HORIZONTAL")
+End Function
+
+Private Function SavedPresetLabel(ByVal slot As Long) As String
+    Dim presetName As String
+    Dim presetWidths As String
+
+    presetName = GetSetting("SMRI", "PanelMaker", "Preset" & slot & "Name", "")
+    presetWidths = GetSetting("SMRI", "PanelMaker", "Preset" & slot & "Widths", "")
+
+    If presetName = "" Then presetName = "Preset " & slot
+
+    If presetWidths = "" Then
+        SavedPresetLabel = slot & " = " & presetName & " (empty)"
+    Else
+        SavedPresetLabel = slot & " = " & presetName & " (" & presetWidths & ")"
+    End If
+End Function
+
+Private Function PresetMenuText() As String
+    Dim i As Long
+    Dim txt As String
+
+    txt = "Choose width preset:" & vbCrLf
+    For i = 1 To 5
+        txt = txt & SavedPresetLabel(i) & vbCrLf
+    Next i
+
+    txt = txt & "N = Create / update preset" & vbCrLf & _
+        "C = Custom one-time widths"
+
+    PresetMenuText = txt
+End Function
+
+Private Function LoadPresetWidths(ByVal slot As Long) As String
+    LoadPresetWidths = GetSetting("SMRI", "PanelMaker", "Preset" & slot & "Widths", "")
+End Function
+
+Private Sub SavePreset(ByVal slot As Long, ByVal presetName As String, ByVal presetWidths As String)
+    SaveSetting "SMRI", "PanelMaker", "Preset" & slot & "Name", presetName
+    SaveSetting "SMRI", "PanelMaker", "Preset" & slot & "Widths", presetWidths
+End Sub
+
+Private Function TryChooseMediaText(ByRef mediaText As String) As Boolean
+    Dim presetChoice As String
+    Dim presetSlot As Long
+    Dim presetName As String
+    Dim presetWidths As String
+
+ChooseAgain:
+    presetChoice = InputBox(PresetMenuText(), "SMRI Panel Maker", "1")
+    If Trim$(presetChoice) = "" Then
+        TryChooseMediaText = False
+        Exit Function
+    End If
+
+    presetChoice = UCase$(Trim$(presetChoice))
+
+    If presetChoice = "C" Or presetChoice = "CUSTOM" Then
+        mediaText = InputBox("Enter available media widths in inches, separated by commas:", "SMRI Panel Maker", "39,49,59")
+        TryChooseMediaText = (Trim$(mediaText) <> "")
+        Exit Function
+    End If
+
+    If presetChoice = "N" Or presetChoice = "NEW" Then
+        presetSlot = CLng(Val(InputBox("Save preset to slot number 1-5:", "SMRI Panel Maker", "1")))
+        If presetSlot < 1 Or presetSlot > 5 Then
+            MsgBox "Please choose a slot from 1 to 5.", vbExclamation
+            GoTo ChooseAgain
+        End If
+
+        presetName = InputBox("Preset name:", "SMRI Panel Maker", "My Preset")
+        If Trim$(presetName) = "" Then
+            TryChooseMediaText = False
+            Exit Function
+        End If
+
+        presetWidths = InputBox("Preset widths in inches, separated by commas:", "SMRI Panel Maker", "39,49,59")
+        If Trim$(presetWidths) = "" Then
+            TryChooseMediaText = False
+            Exit Function
+        End If
+
+        SavePreset presetSlot, presetName, presetWidths
+        mediaText = presetWidths
+        TryChooseMediaText = True
+        Exit Function
+    End If
+
+    presetSlot = CLng(Val(presetChoice))
+    If presetSlot >= 1 And presetSlot <= 5 Then
+        mediaText = LoadPresetWidths(presetSlot)
+        If Trim$(mediaText) = "" Then
+            MsgBox "That preset slot is empty. Create a preset first or choose Custom.", vbExclamation
+            GoTo ChooseAgain
+        End If
+
+        TryChooseMediaText = True
+        Exit Function
+    End If
+
+    MsgBox "Choose preset 1-5, N for new preset, or C for custom.", vbExclamation
+    GoTo ChooseAgain
 End Function
 
 Private Sub FindBestCounts(ByRef mediaWidths() As Double, ByVal mediaCount As Long, ByVal idx As Long, _
@@ -202,34 +285,17 @@ Sub SMRI_AutoPanelPowerClips()
 
     Dim mediaWidths() As Double
     Dim panelWidths() As Double
-    Dim presetChoice As String
     Dim mediaText As String
     Dim directionText As String
-    Dim horizontalCut As Boolean
     Dim overlapText As String
+    Dim horizontalCut As Boolean
     Dim mediaCount As Long
     Dim overlap As Double
     Dim gap As Double
 
-    presetChoice = InputBox("Choose media preset:" & vbCrLf & _
-        "1 = Flex (36,39,48,49,60,72,84)" & vbCrLf & _
-        "2 = Vinyl (36,39,48,49,60)" & vbCrLf & _
-        "3 = Saved Custom" & vbCrLf & _
-        "4 = New Custom", "SMRI Panel Maker", "1")
-
-    If Trim$(presetChoice) = "" Then
+    If Not TryChooseMediaText(mediaText) Then
         ActiveDocument.Unit = oldUnit
         Exit Sub
-    End If
-
-    mediaText = GetPresetMediaText(presetChoice)
-    If mediaText = "" Then
-        mediaText = InputBox("Enter available media widths in inches, separated by commas:", "SMRI Panel Maker", "39,49,59")
-        If Trim$(mediaText) <> "" Then
-            If UCase$(Trim$(InputBox("Save this as your custom preset? Y/N", "SMRI Panel Maker", "Y"))) = "Y" Then
-                SaveCustomMediaText mediaText
-            End If
-        End If
     End If
 
     If Not ParseMediaWidths(mediaText, mediaWidths, mediaCount) Then
@@ -343,13 +409,14 @@ Sub SMRI_AutoPanelPowerClips()
             hDup.AddToPowerClip hBox, cdrFalse
 
             Dim hLabel As Shape
-            Set hLabel = ActiveLayer.CreateArtisticText(destX, destY + panelH + 0.04, _
+            Set hLabel = ActiveLayer.CreateArtisticText(destX - 0.04, destY, _
                 "Tile " & (i + 1) & " | Total Height: " & FormatInches(h) & _
                 """ | Panel Height: " & FormatInches(panelH) & """")
 
             hLabel.Text.Story.Size = 18
             hLabel.Text.Story.Font = "Arial"
             hLabel.Text.Story.Bold = True
+            hLabel.Rotate 90
 
             currentSourceY = currentSourceY + panelH - overlap
             currentDestY = currentDestY + panelH + gap
