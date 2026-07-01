@@ -49,17 +49,73 @@ SMRI.PanelMaker\bin\Release\SMRI.PanelMaker.exe
 
 ## Test manually
 
-1. Start CorelDRAW 2024 or 2025.
-2. Open the document you want to panel.
-3. Select the artwork/image.
-4. Run `SMRI.PanelMaker\bin\Release\SMRI.PanelMaker.exe`.
-5. On first run, enter the license key.
-6. Enter media widths and overlap when prompted.
+Use these steps immediately after building in Visual Studio.
+
+1. Create this folder:
+
+```text
+C:\SMRI\PanelMaker
+```
+
+2. Copy these two files from `SMRI.PanelMaker\bin\Release` into `C:\SMRI\PanelMaker`:
+
+```text
+SMRI.PanelMaker.exe
+SMRI.PanelMaker.exe.config
+```
+
+3. Start CorelDRAW 2024 or 2025 normally. Do not use "Run as administrator".
+4. Open the document you want to panel.
+5. Select the artwork/image.
+6. Double-click:
+
+```text
+C:\SMRI\PanelMaker\SMRI.PanelMaker.exe
+```
+
+7. On first run, enter the license key.
+8. Enter media widths and overlap when prompted.
 
 Activation is saved to:
 
 ```text
 C:\ProgramData\SMRI\PanelMaker\license.json
+```
+
+If the EXE says CorelDRAW is not running while Task Manager shows CorelDRAW, check Windows permission levels. CorelDRAW and `SMRI.PanelMaker.exe` must both run normally, or both run as administrator. The usual setup is: run CorelDRAW normally, then run SMRI Panel Maker normally from the CorelDRAW launcher macro or Start menu.
+
+## Add CorelDRAW launcher macro manually
+
+Use this while testing before you build the installer.
+
+1. Make sure these files exist:
+
+```text
+C:\SMRI\PanelMaker\SMRI.PanelMaker.exe
+C:\SMRI\PanelMaker\SMRI.PanelMaker.exe.config
+```
+
+2. Open CorelDRAW.
+3. Open `Tools > Scripts > Script Editor`.
+4. In the Script Editor, choose `File > Import File`.
+5. Import this file from the project:
+
+```text
+Launcher\SMRI_PanelMaker_Launcher.bas
+```
+
+6. Save the macro project when CorelDRAW asks.
+7. Back in CorelDRAW, open `Tools > Scripts > Run Script`.
+8. Select and run:
+
+```text
+SMRI_RunPanelMaker
+```
+
+The macro simply launches:
+
+```text
+C:\SMRI\PanelMaker\SMRI.PanelMaker.exe
 ```
 
 ## Build installer

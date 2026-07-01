@@ -151,14 +151,17 @@ namespace SMRI.PanelMaker
                 }
             }
 
-            throw new InvalidOperationException("CorelDRAW is not running, or its COM automation server is not registered. Open CorelDRAW and try again.");
+            throw new InvalidOperationException(
+                "CorelDRAW is not running, its COM automation server is not registered, or Windows is blocking access because CorelDRAW and SMRI Panel Maker are running at different permission levels." +
+                Environment.NewLine + Environment.NewLine +
+                "Open CorelDRAW normally, then run SMRI Panel Maker normally from the CorelDRAW launcher macro or Start menu. Do not run one as administrator unless both are running as administrator.");
         }
 
         private static IEnumerable<string> GetCorelDrawProgIds()
         {
             yield return "CorelDRAW.Application";
 
-            for (int version = 27; version >= 17; version--)
+            for (int version = 35; version >= 17; version--)
             {
                 yield return "CorelDRAW.Application." + version.ToString(CultureInfo.InvariantCulture);
             }
