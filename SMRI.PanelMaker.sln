@@ -2,7 +2,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LicenseOverlap", "LicenseOverlap.csproj", "{574226A6-D773-4AD8-9A3B-5CB76E9BBBFA}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SMRI.PanelMaker", "SMRI.PanelMaker\SMRI.PanelMaker.csproj", "{4A736D2B-8754-44D6-9B9E-F134F86B26E2}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -10,10 +10,10 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{574226A6-D773-4AD8-9A3B-5CB76E9BBBFA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{574226A6-D773-4AD8-9A3B-5CB76E9BBBFA}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{574226A6-D773-4AD8-9A3B-5CB76E9BBBFA}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{574226A6-D773-4AD8-9A3B-5CB76E9BBBFA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4A736D2B-8754-44D6-9B9E-F134F86B26E2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4A736D2B-8754-44D6-9B9E-F134F86B26E2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4A736D2B-8754-44D6-9B9E-F134F86B26E2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4A736D2B-8754-44D6-9B9E-F134F86B26E2}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

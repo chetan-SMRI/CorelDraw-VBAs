@@ -1,17 +1,17 @@
 using System.Reflection;
 using System.Runtime.InteropServices;
 
-[assembly: AssemblyTitle("LicenseOverlap")]
-[assembly: AssemblyDescription("Licensed CorelDRAW overlap panel tool")]
+[assembly: AssemblyTitle("SMRI Panel Maker")]
+[assembly: AssemblyDescription("CorelDRAW panel creation utility")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("SMRI")]
-[assembly: AssemblyProduct("LicenseOverlap")]
+[assembly: AssemblyProduct("SMRI Panel Maker")]
 [assembly: AssemblyCopyright("Copyright SMRI")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
-[assembly: ComVisible(true)]
-[assembly: Guid("574226A6-D773-4AD8-9A3B-5CB76E9BBBFA")]
+[assembly: ComVisible(false)]
+[assembly: Guid("99b83759-23b1-4e2c-9d43-94308d8f09f8")]
 
 [assembly: AssemblyVersion("1.0.0.0")]
 [assembly: AssemblyFileVersion("1.0.0.0")]
