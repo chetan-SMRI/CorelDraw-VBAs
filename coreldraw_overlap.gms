@@ -72,6 +72,30 @@ InvalidWidth:
     ParseMediaWidths = False
 End Function
 
+Private Function GetPresetMediaText(ByVal presetChoice As String) As String
+    presetChoice = UCase$(Trim$(presetChoice))
+
+    Select Case presetChoice
+        Case "1", "F", "FLEX"
+            GetPresetMediaText = "36,39,48,49,60,72,84"
+        Case "2", "V", "VINYL"
+            GetPresetMediaText = "36,39,48,49,60"
+        Case "3", "S", "SAVED"
+            GetPresetMediaText = GetSetting("SMRI", "PanelMaker", "CustomMediaWidths", "")
+        Case Else
+            GetPresetMediaText = ""
+    End Select
+End Function
+
+Private Sub SaveCustomMediaText(ByVal mediaText As String)
+    SaveSetting "SMRI", "PanelMaker", "CustomMediaWidths", mediaText
+End Sub
+
+Private Function IsHorizontalCut(ByVal directionText As String) As Boolean
+    directionText = UCase$(Trim$(directionText))
+    IsHorizontalCut = (directionText = "H" Or directionText = "2" Or directionText = "HORIZONTAL")
+End Function
+
 Private Sub FindBestCounts(ByRef mediaWidths() As Double, ByVal mediaCount As Long, ByVal idx As Long, _
     ByVal remainingPanels As Long, ByVal currentSum As Double, ByVal targetSum As Double, _
     ByRef counts() As Long, ByRef bestCounts() As Long, ByRef bestWaste As Double, ByRef bestFound As Boolean)
@@ -178,18 +202,52 @@ Sub SMRI_AutoPanelPowerClips()
 
     Dim mediaWidths() As Double
     Dim panelWidths() As Double
+    Dim presetChoice As String
     Dim mediaText As String
+    Dim directionText As String
+    Dim horizontalCut As Boolean
     Dim overlapText As String
     Dim mediaCount As Long
     Dim overlap As Double
     Dim gap As Double
 
-    mediaText = InputBox("Enter available media widths in inches, separated by commas:", "SMRI Panel Maker", "39,49,59")
+    presetChoice = InputBox("Choose media preset:" & vbCrLf & _
+        "1 = Flex (36,39,48,49,60,72,84)" & vbCrLf & _
+        "2 = Vinyl (36,39,48,49,60)" & vbCrLf & _
+        "3 = Saved Custom" & vbCrLf & _
+        "4 = New Custom", "SMRI Panel Maker", "1")
+
+    If Trim$(presetChoice) = "" Then
+        ActiveDocument.Unit = oldUnit
+        Exit Sub
+    End If
+
+    mediaText = GetPresetMediaText(presetChoice)
+    If mediaText = "" Then
+        mediaText = InputBox("Enter available media widths in inches, separated by commas:", "SMRI Panel Maker", "39,49,59")
+        If Trim$(mediaText) <> "" Then
+            If UCase$(Trim$(InputBox("Save this as your custom preset? Y/N", "SMRI Panel Maker", "Y"))) = "Y" Then
+                SaveCustomMediaText mediaText
+            End If
+        End If
+    End If
+
     If Not ParseMediaWidths(mediaText, mediaWidths, mediaCount) Then
         MsgBox "Please enter valid media widths, like 39,49,59.", vbCritical
         ActiveDocument.Unit = oldUnit
         Exit Sub
     End If
+
+    directionText = InputBox("Choose cut direction:" & vbCrLf & _
+        "V = Vertical panels, split by artwork width" & vbCrLf & _
+        "H = Horizontal panels, split by artwork height", "SMRI Panel Maker", "V")
+
+    If Trim$(directionText) = "" Then
+        ActiveDocument.Unit = oldUnit
+        Exit Sub
+    End If
+
+    horizontalCut = IsHorizontalCut(directionText)
 
     overlapText = InputBox("Enter overlap in inches:", "SMRI Panel Maker", "0.75")
     On Error GoTo InvalidOverlap
@@ -211,7 +269,15 @@ Sub SMRI_AutoPanelPowerClips()
     src.GetBoundingBox x, y, w, h, True
 
     Dim panels As Long
-    If Not BuildPanelSuggestions(w, mediaWidths, mediaCount, overlap, panelWidths, panels) Then
+    Dim artworkSpan As Double
+
+    If horizontalCut Then
+        artworkSpan = h
+    Else
+        artworkSpan = w
+    End If
+
+    If Not BuildPanelSuggestions(artworkSpan, mediaWidths, mediaCount, overlap, panelWidths, panels) Then
         MsgBox "Could not build panel suggestions from the entered media widths.", vbCritical
         ActiveDocument.Unit = oldUnit
         Exit Sub
@@ -226,57 +292,104 @@ Sub SMRI_AutoPanelPowerClips()
     Dim i As Long
     Dim panelLeft As Double
     Dim panelW As Double
+    Dim panelTop As Double
+    Dim panelH As Double
     Dim remainingW As Double
+    Dim remainingH As Double
     Dim destX As Double
+    Dim destY As Double
     Dim currentSourceX As Double
+    Dim currentSourceY As Double
     Dim currentDestX As Double
+    Dim currentDestY As Double
     Dim suggestionText As String
     Dim createdPanels As Long
 
     ActiveDocument.BeginCommandGroup "SMRI Auto Panel PowerClips"
 
     currentSourceX = x
+    currentSourceY = y
     currentDestX = startX
+    currentDestY = y
     suggestionText = "Panel suggestions:" & vbCrLf
     createdPanels = 0
 
     For i = 0 To panels - 1
 
-        panelLeft = currentSourceX
-        panelW = panelWidths(i)
-        remainingW = (x + w) - panelLeft
-        If panelW > remainingW Then panelW = remainingW
-        If panelW <= 0 Then Exit For
+        If horizontalCut Then
+            panelTop = currentSourceY
+            panelH = panelWidths(i)
+            remainingH = (y + h) - panelTop
+            If panelH > remainingH Then panelH = remainingH
+            If panelH <= 0 Then Exit For
 
-        destX = currentDestX
-        createdPanels = createdPanels + 1
-        suggestionText = suggestionText & "Panel " & (i + 1) & " " & FormatInches(panelW) & """" & vbCrLf
+            destX = x + w + gap
+            destY = currentDestY
+            createdPanels = createdPanels + 1
+            suggestionText = suggestionText & "Panel " & (i + 1) & " " & FormatInches(panelH) & """" & vbCrLf
 
-        Dim box As Shape
-        Set box = ActiveLayer.CreateRectangle2(destX, startY, panelW, h)
+            Dim hBox As Shape
+            Set hBox = ActiveLayer.CreateRectangle2(destX, destY, w, panelH)
 
-        box.Name = "Panel_" & Format(i + 1, "00")
-        box.Fill.ApplyNoFill
-        box.Outline.Width = 0.01
+            hBox.Name = "Panel_" & Format(i + 1, "00")
+            hBox.Fill.ApplyNoFill
+            hBox.Outline.Width = 0.01
 
-        Dim dup As ShapeRange
-        Set dup = src.Duplicate
+            Dim hDup As ShapeRange
+            Set hDup = src.Duplicate
 
-        dup.Move destX - panelLeft, startY - y
+            hDup.Move destX - x, destY - panelTop
 
-        dup.AddToPowerClip box, cdrFalse
+            hDup.AddToPowerClip hBox, cdrFalse
 
-        Dim label As Shape
-        Set label = ActiveLayer.CreateArtisticText(destX, startY + h + 0.04, _
-            "Tile " & (i + 1) & " | Total Width: " & FormatInches(w) & _
-            """ | Panel Width: " & FormatInches(panelW) & """")
+            Dim hLabel As Shape
+            Set hLabel = ActiveLayer.CreateArtisticText(destX, destY + panelH + 0.04, _
+                "Tile " & (i + 1) & " | Total Height: " & FormatInches(h) & _
+                """ | Panel Height: " & FormatInches(panelH) & """")
 
-        label.Text.Story.Size = 18
-        label.Text.Story.Font = "Arial"
-        label.Text.Story.Bold = True
+            hLabel.Text.Story.Size = 18
+            hLabel.Text.Story.Font = "Arial"
+            hLabel.Text.Story.Bold = True
 
-        currentSourceX = currentSourceX + panelW - overlap
-        currentDestX = currentDestX + panelW + gap
+            currentSourceY = currentSourceY + panelH - overlap
+            currentDestY = currentDestY + panelH + gap
+        Else
+            panelLeft = currentSourceX
+            panelW = panelWidths(i)
+            remainingW = (x + w) - panelLeft
+            If panelW > remainingW Then panelW = remainingW
+            If panelW <= 0 Then Exit For
+
+            destX = currentDestX
+            createdPanels = createdPanels + 1
+            suggestionText = suggestionText & "Panel " & (i + 1) & " " & FormatInches(panelW) & """" & vbCrLf
+
+            Dim box As Shape
+            Set box = ActiveLayer.CreateRectangle2(destX, startY, panelW, h)
+
+            box.Name = "Panel_" & Format(i + 1, "00")
+            box.Fill.ApplyNoFill
+            box.Outline.Width = 0.01
+
+            Dim dup As ShapeRange
+            Set dup = src.Duplicate
+
+            dup.Move destX - panelLeft, startY - y
+
+            dup.AddToPowerClip box, cdrFalse
+
+            Dim label As Shape
+            Set label = ActiveLayer.CreateArtisticText(destX, startY + h + 0.04, _
+                "Tile " & (i + 1) & " | Total Width: " & FormatInches(w) & _
+                """ | Panel Width: " & FormatInches(panelW) & """")
+
+            label.Text.Story.Size = 18
+            label.Text.Story.Font = "Arial"
+            label.Text.Story.Bold = True
+
+            currentSourceX = currentSourceX + panelW - overlap
+            currentDestX = currentDestX + panelW + gap
+        End If
 
     Next i
 
