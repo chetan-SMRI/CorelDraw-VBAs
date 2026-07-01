@@ -148,11 +148,11 @@ Private Sub AddBlendMarkers(ByVal destX As Double, ByVal destY As Double, ByVal 
         End If
     Else
         If panelIndex > 0 Then
-            AddVerticalPanelSeamMarkers destX, destY, panelH, -1, markerLen
+            AddVerticalPanelSeamMarkers destX, destY, panelH, 1, markerLen
         End If
 
         If panelIndex < panelCount - 1 Then
-            AddVerticalPanelSeamMarkers destX + panelW, destY, panelH, -1, markerLen
+            AddVerticalPanelSeamMarkers destX + panelW, destY, panelH, 1, markerLen
         End If
     End If
 End Sub
