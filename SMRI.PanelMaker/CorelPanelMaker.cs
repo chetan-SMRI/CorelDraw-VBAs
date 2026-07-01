@@ -140,14 +140,7 @@ namespace SMRI.PanelMaker
 
         private static dynamic GetRunningCorelDraw()
         {
-            string[] progIds =
-            {
-                "CorelDRAW.Application.25",
-                "CorelDRAW.Application.24",
-                "CorelDRAW.Application"
-            };
-
-            foreach (string progId in progIds)
+            foreach (string progId in GetCorelDrawProgIds())
             {
                 try
                 {
@@ -158,7 +151,17 @@ namespace SMRI.PanelMaker
                 }
             }
 
-            throw new InvalidOperationException("CorelDRAW 2024 is not running. Open CorelDRAW 2024 and try again.");
+            throw new InvalidOperationException("CorelDRAW is not running, or its COM automation server is not registered. Open CorelDRAW and try again.");
+        }
+
+        private static IEnumerable<string> GetCorelDrawProgIds()
+        {
+            yield return "CorelDRAW.Application";
+
+            for (int version = 27; version >= 17; version--)
+            {
+                yield return "CorelDRAW.Application." + version.ToString(CultureInfo.InvariantCulture);
+            }
         }
 
         private static double[] PromptForMediaWidths()

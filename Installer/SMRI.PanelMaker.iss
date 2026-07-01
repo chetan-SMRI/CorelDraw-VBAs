@@ -25,11 +25,13 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 [Dirs]
 Name: "{commonappdata}\SMRI\PanelMaker"; Permissions: users-modify
 Name: "{userappdata}\Corel\CorelDRAW Graphics Suite 2024\Draw\GMS"
+Name: "{userappdata}\Corel\CorelDRAW Graphics Suite 2025\Draw\GMS"
 
 [Files]
 Source: "..\SMRI.PanelMaker\bin\Release\SMRI.PanelMaker.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\SMRI.PanelMaker\bin\Release\SMRI.PanelMaker.exe.config"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\Launcher\SMRI_PanelMaker_Launcher.gms"; DestDir: "{userappdata}\Corel\CorelDRAW Graphics Suite 2024\Draw\GMS"; Flags: ignoreversion
+Source: "..\Launcher\SMRI_PanelMaker_Launcher.gms"; DestDir: "{userappdata}\Corel\CorelDRAW Graphics Suite 2025\Draw\GMS"; Flags: ignoreversion
 
 [Icons]
 Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"

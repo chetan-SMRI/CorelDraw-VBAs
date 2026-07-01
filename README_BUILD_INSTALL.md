@@ -1,6 +1,6 @@
 # SMRI Panel Maker build and install
 
-This project is a simple .NET Framework 4.8 Windows EXE that connects to the currently running CorelDRAW instance through COM automation and modifies the active document.
+This project is a simple .NET Framework 4.8 Windows EXE that connects to the currently running CorelDRAW instance through COM automation and modifies the active document. The same EXE can be used for CorelDRAW 2024 and 2025.
 
 ## Before building
 
@@ -49,7 +49,7 @@ SMRI.PanelMaker\bin\Release\SMRI.PanelMaker.exe
 
 ## Test manually
 
-1. Start CorelDRAW 2024.
+1. Start CorelDRAW 2024 or 2025.
 2. Open the document you want to panel.
 3. Select the artwork/image.
 4. Run `SMRI.PanelMaker\bin\Release\SMRI.PanelMaker.exe`.
@@ -81,6 +81,7 @@ The installer copies:
 - `SMRI.PanelMaker.exe` to `C:\SMRI\PanelMaker`
 - `SMRI.PanelMaker.exe.config` to `C:\SMRI\PanelMaker`
 - `Launcher\SMRI_PanelMaker_Launcher.gms` to `%APPDATA%\Corel\CorelDRAW Graphics Suite 2024\Draw\GMS`
+- `Launcher\SMRI_PanelMaker_Launcher.gms` to `%APPDATA%\Corel\CorelDRAW Graphics Suite 2025\Draw\GMS`
 
 ## CorelDRAW launcher macro
 
