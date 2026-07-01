@@ -84,6 +84,12 @@ C:\ProgramData\SMRI\PanelMaker\license.json
 
 If the EXE says CorelDRAW is not running while Task Manager shows CorelDRAW, check Windows permission levels. CorelDRAW and `SMRI.PanelMaker.exe` must both run normally, or both run as administrator. The usual setup is: run CorelDRAW normally, then run SMRI Panel Maker normally from the CorelDRAW launcher macro or Start menu.
 
+If the error continues, CorelDRAW's COM automation registration may be missing on that PC. Try opening CorelDRAW once as administrator, close it, then reopen CorelDRAW normally and run SMRI Panel Maker normally. The EXE also writes a diagnostic file here:
+
+```text
+C:\ProgramData\SMRI\PanelMaker\coreldraw-com-diagnostic.txt
+```
+
 ## Add CorelDRAW launcher macro manually
 
 Use this while testing before you build the installer.

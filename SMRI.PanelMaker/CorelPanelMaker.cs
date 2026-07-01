@@ -1,8 +1,10 @@
 using Microsoft.VisualBasic;
+using Microsoft.Win32;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.IO;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
 
@@ -140,31 +142,157 @@ namespace SMRI.PanelMaker
 
         private static dynamic GetRunningCorelDraw()
         {
+            List<string> attemptedProgIds = new List<string>();
+            List<string> errors = new List<string>();
+
             foreach (string progId in GetCorelDrawProgIds())
             {
+                attemptedProgIds.Add(progId);
+
                 try
                 {
                     return Marshal.GetActiveObject(progId);
                 }
-                catch (COMException)
+                catch (COMException ex)
                 {
+                    errors.Add(progId + ": GetActiveObject failed 0x" + ex.ErrorCode.ToString("X8", CultureInfo.InvariantCulture));
+                }
+
+                try
+                {
+                    Type appType = Type.GetTypeFromProgID(progId, false);
+                    if (appType == null)
+                    {
+                        continue;
+                    }
+
+                    return Activator.CreateInstance(appType);
+                }
+                catch (COMException ex)
+                {
+                    errors.Add(progId + ": CreateInstance failed 0x" + ex.ErrorCode.ToString("X8", CultureInfo.InvariantCulture));
+                }
+                catch (UnauthorizedAccessException ex)
+                {
+                    errors.Add(progId + ": " + ex.GetType().Name + " " + ex.Message);
                 }
             }
+
+            WriteComDiagnosticLog(attemptedProgIds, errors);
 
             throw new InvalidOperationException(
                 "CorelDRAW is not running, its COM automation server is not registered, or Windows is blocking access because CorelDRAW and SMRI Panel Maker are running at different permission levels." +
                 Environment.NewLine + Environment.NewLine +
-                "Open CorelDRAW normally, then run SMRI Panel Maker normally from the CorelDRAW launcher macro or Start menu. Do not run one as administrator unless both are running as administrator.");
+                "Open CorelDRAW normally, then run SMRI Panel Maker normally from the CorelDRAW launcher macro or Start menu. Do not run one as administrator unless both are running as administrator." +
+                Environment.NewLine + Environment.NewLine +
+                "Diagnostic log: " + GetComDiagnosticLogPath());
         }
 
         private static IEnumerable<string> GetCorelDrawProgIds()
         {
-            yield return "CorelDRAW.Application";
+            HashSet<string> seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (string progId in GetRegistryCorelDrawProgIds())
+            {
+                if (seen.Add(progId))
+                {
+                    yield return progId;
+                }
+            }
+
+            string[] commonProgIds =
+            {
+                "CorelDRAW.Application",
+                "CorelDRAW.Application.26",
+                "CorelDRAW.Application.25",
+                "CorelDRAW.Application.24"
+            };
+
+            foreach (string progId in commonProgIds)
+            {
+                if (seen.Add(progId))
+                {
+                    yield return progId;
+                }
+            }
 
             for (int version = 35; version >= 17; version--)
             {
-                yield return "CorelDRAW.Application." + version.ToString(CultureInfo.InvariantCulture);
+                string progId = "CorelDRAW.Application." + version.ToString(CultureInfo.InvariantCulture);
+                if (seen.Add(progId))
+                {
+                    yield return progId;
+                }
             }
+        }
+
+        private static IEnumerable<string> GetRegistryCorelDrawProgIds()
+        {
+            List<string> progIds = new List<string>();
+
+            try
+            {
+                foreach (string subKeyName in Registry.ClassesRoot.GetSubKeyNames())
+                {
+                    if (subKeyName.StartsWith("CorelDRAW.Application", StringComparison.OrdinalIgnoreCase))
+                    {
+                        progIds.Add(subKeyName);
+                    }
+                }
+            }
+            catch
+            {
+            }
+
+            return progIds
+                .OrderByDescending(GetProgIdVersion)
+                .ThenByDescending(p => p, StringComparer.OrdinalIgnoreCase);
+        }
+
+        private static double GetProgIdVersion(string progId)
+        {
+            int lastDot = progId.LastIndexOf('.');
+            if (lastDot < 0 || lastDot == progId.Length - 1)
+            {
+                return 0;
+            }
+
+            double version;
+            return double.TryParse(progId.Substring(lastDot + 1), NumberStyles.Float, CultureInfo.InvariantCulture, out version)
+                ? version
+                : 0;
+        }
+
+        private static void WriteComDiagnosticLog(IEnumerable<string> attemptedProgIds, IEnumerable<string> errors)
+        {
+            try
+            {
+                string path = GetComDiagnosticLogPath();
+                Directory.CreateDirectory(Path.GetDirectoryName(path));
+                File.WriteAllText(path,
+                    "SMRI Panel Maker CorelDRAW COM diagnostic" + Environment.NewLine +
+                    "Time: " + DateTime.Now.ToString("o", CultureInfo.InvariantCulture) + Environment.NewLine +
+                    "Is64BitProcess: " + Environment.Is64BitProcess + Environment.NewLine +
+                    "Is64BitOperatingSystem: " + Environment.Is64BitOperatingSystem + Environment.NewLine +
+                    Environment.NewLine +
+                    "Attempted ProgIDs:" + Environment.NewLine +
+                    string.Join(Environment.NewLine, attemptedProgIds) + Environment.NewLine +
+                    Environment.NewLine +
+                    "Errors:" + Environment.NewLine +
+                    string.Join(Environment.NewLine, errors));
+            }
+            catch
+            {
+            }
+        }
+
+        private static string GetComDiagnosticLogPath()
+        {
+            return Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
+                "SMRI",
+                "PanelMaker",
+                "coreldraw-com-diagnostic.txt");
         }
 
         private static double[] PromptForMediaWidths()
