@@ -558,7 +558,7 @@ Sub SMRI_AutoPanelPowerClips()
             End If
 
             Dim label As Shape
-            Set label = ActiveLayer.CreateArtisticText(destX, startY + h + 0.04, _
+            Set label = ActiveLayer.CreateArtisticText(destX, startY + h + 0.14, _
                 "Tile " & (i + 1) & " | Total Width: " & FormatInches(w) & _
                 """ | Panel Width: " & FormatInches(panelW) & """")
 
