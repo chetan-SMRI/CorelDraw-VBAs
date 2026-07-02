@@ -147,9 +147,10 @@ namespace SMRI.PanelMaker
                         double horizontalLabelX = destX - 0.35;
                         double horizontalLabelY = destY;
                         dynamic label = activeLayer.CreateArtisticText(horizontalLabelX, horizontalLabelY,
-                            "Tile " + (i + 1) +
-                            " | Total Height: " + FormatInches(height) + "\"" +
-                            " | Panel Height: " + FormatInches(panelHeight) + "\"");
+                            "Part " + (i + 1) +
+                            " | Size: " + FormatInches(width) + "\"x" + FormatInches(height) + "\"" +
+                            " | Part Height: " + FormatInches(panelHeight) + "\"" +
+                            " | Overlap " + FormatInches(overlap) + "\"");
 
                         label.Text.Story.Size = 18;
                         label.Text.Story.Font = "Arial";
@@ -195,9 +196,10 @@ namespace SMRI.PanelMaker
                         }
 
                         dynamic label = activeLayer.CreateArtisticText(destX, startY + height + 0.14,
-                            "Tile " + (i + 1) +
-                            " | Total Width: " + FormatInches(width) + "\"" +
-                            " | Panel Width: " + FormatInches(panelWidth) + "\"");
+                            "Part " + (i + 1) +
+                            " | Size: " + FormatInches(width) + "\"x" + FormatInches(height) + "\"" +
+                            " | Part Width: " + FormatInches(panelWidth) + "\"" +
+                            " | Overlap " + FormatInches(overlap) + "\"");
 
                         label.Text.Story.Size = 18;
                         label.Text.Story.Font = "Arial";
@@ -475,12 +477,12 @@ namespace SMRI.PanelMaker
 
         private static double? PromptForOverlap(double smallestMediaWidth)
         {
-            string overlapText = Interaction.InputBox("Enter overlap in inches:", "SMRI Panel Maker", "0.75");
+            string overlapText = Interaction.InputBox("Enter overlap in inches:", "SMRI Panel Maker", "0.5");
             double overlap;
             if (!double.TryParse(overlapText, NumberStyles.Float, CultureInfo.CurrentCulture, out overlap) &&
                 !double.TryParse(overlapText, NumberStyles.Float, CultureInfo.InvariantCulture, out overlap))
             {
-                MessageBox.Show("Please enter a valid overlap, like 0.75.", "SMRI Panel Maker",
+                MessageBox.Show("Please enter a valid overlap, like 0.5.", "SMRI Panel Maker",
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return null;
             }

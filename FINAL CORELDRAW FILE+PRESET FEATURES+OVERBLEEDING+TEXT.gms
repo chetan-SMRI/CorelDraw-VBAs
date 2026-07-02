@@ -407,7 +407,7 @@ Sub SMRI_AutoPanelPowerClips()
 
     horizontalCut = IsHorizontalCut(directionText)
 
-    overlapText = InputBox("Enter overlap in inches:", "SMRI Panel Maker", "0.75")
+    overlapText = InputBox("Enter overlap in inches:", "SMRI Panel Maker", "0.5")
     On Error GoTo InvalidOverlap
     overlap = CDbl(overlapText)
     On Error GoTo 0
@@ -517,8 +517,9 @@ Sub SMRI_AutoPanelPowerClips()
             horizontalLabelY = destY
 
             Set hLabel = ActiveLayer.CreateArtisticText(horizontalLabelX, horizontalLabelY, _
-                "Tile " & (i + 1) & " | Total Height: " & FormatInches(h) & _
-                """ | Panel Height: " & FormatInches(panelH) & """")
+                "Part " & (i + 1) & " | Size: " & FormatInches(w) & _
+                """x" & FormatInches(h) & """ | Part Height: " & FormatInches(panelH) & _
+                """ | Overlap " & FormatInches(overlap) & """")
 
             hLabel.Text.Story.Size = 18
             hLabel.Text.Story.Font = "Arial"
@@ -559,8 +560,9 @@ Sub SMRI_AutoPanelPowerClips()
 
             Dim label As Shape
             Set label = ActiveLayer.CreateArtisticText(destX, startY + h + 0.14, _
-                "Tile " & (i + 1) & " | Total Width: " & FormatInches(w) & _
-                """ | Panel Width: " & FormatInches(panelW) & """")
+                "Part " & (i + 1) & " | Size: " & FormatInches(w) & _
+                """x" & FormatInches(h) & """ | Part Width: " & FormatInches(panelW) & _
+                """ | Overlap " & FormatInches(overlap) & """")
 
             label.Text.Story.Size = 18
             label.Text.Story.Font = "Arial"
@@ -579,7 +581,7 @@ Sub SMRI_AutoPanelPowerClips()
     Exit Sub
 
 InvalidOverlap:
-    MsgBox "Please enter a valid overlap, like 0.75.", vbCritical
+    MsgBox "Please enter a valid overlap, like 0.5.", vbCritical
     ActiveDocument.Unit = oldUnit
 
 End Sub
