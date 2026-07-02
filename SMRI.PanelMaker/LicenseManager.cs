@@ -36,6 +36,7 @@ namespace SMRI.PanelMaker
                 {
                     MessageBox.Show("The saved license could not be verified. Please activate again.",
                         ProductName, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return PromptAndForceReauthentication(machineId);
                 }
 
                 return PromptAndActivate(machineId);
@@ -43,9 +44,8 @@ namespace SMRI.PanelMaker
 
             if (!string.Equals(existing.MachineId, machineId, StringComparison.OrdinalIgnoreCase))
             {
-                MessageBox.Show("This license file is bound to another computer. Please activate this device with your license key.",
-                    ProductName, MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return PromptAndActivate(machineId);
+                return RequireForceReauthentication(existing, machineId,
+                    "The saved license uses an older device identity for this PC. Internet reauthentication is required once.");
             }
 
             DateTime utcNow = DateTime.UtcNow;
@@ -81,10 +81,10 @@ namespace SMRI.PanelMaker
             }
 
             MessageBox.Show(BuildFailureMessage(validation.Message,
-                    "License validation failed. Please activate again. If this license is already active on another PC, deactivate it there or from the admin side first."),
+                    "License validation failed. Please reauthenticate this device. If this license is truly active on another PC, deactivate it there or from the admin side first."),
                 ProductName, MessageBoxButtons.OK, MessageBoxIcon.Error);
 
-            return PromptAndActivate(machineId);
+            return PromptAndForceReauthentication(machineId);
         }
 
         public bool Deactivate()
@@ -141,6 +141,16 @@ namespace SMRI.PanelMaker
 
         private static bool PromptAndActivate(string machineId)
         {
+            return PromptAndAuthenticate("activate_license", machineId, "License activation failed.");
+        }
+
+        private static bool PromptAndForceReauthentication(string machineId)
+        {
+            return PromptAndAuthenticate("force_reauthentication", machineId, "Online reauthentication failed.");
+        }
+
+        private static bool PromptAndAuthenticate(string method, string machineId, string failureMessage)
+        {
             string licenseKey = Interaction.InputBox("Enter your SMRI Panel Maker license key:", ProductName, "");
             if (string.IsNullOrWhiteSpace(licenseKey))
             {
@@ -148,11 +158,11 @@ namespace SMRI.PanelMaker
                 return false;
             }
 
-            ApiCallResult<ActivationResponse> result = ActivateOrForce("activate_license", licenseKey.Trim(), machineId);
+            ApiCallResult<ActivationResponse> result = ActivateOrForce(method, licenseKey.Trim(), machineId);
             if (!result.Success || result.Response == null || !result.Response.Success)
             {
                 string detail = result.Response != null ? result.Response.Message : result.Message;
-                MessageBox.Show(BuildFailureMessage(detail, "License activation failed."),
+                MessageBox.Show(BuildFailureMessage(detail, failureMessage),
                     ProductName, MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return false;
             }
@@ -341,25 +351,29 @@ namespace SMRI.PanelMaker
                     return null;
                 }
 
-                string machineId = GetMachineId();
-                byte[] encryptionKey;
-                byte[] signingKey;
-                BuildLocalKeys(machineId, out encryptionKey, out signingKey);
-
-                string expectedSignature = SignLicenseFile(file, signingKey);
-                if (!FixedTimeEquals(expectedSignature, file.Signature))
+                foreach (string keyId in GetLocalKeyIds())
                 {
-                    status = LocalLicenseReadStatus.InvalidSignature;
-                    return null;
+                    byte[] encryptionKey;
+                    byte[] signingKey;
+                    BuildLocalKeys(keyId, out encryptionKey, out signingKey);
+
+                    string expectedSignature = SignLicenseFile(file, signingKey);
+                    if (!FixedTimeEquals(expectedSignature, file.Signature))
+                    {
+                        continue;
+                    }
+
+                    byte[] plainBytes = Decrypt(Convert.FromBase64String(file.CipherText), Convert.FromBase64String(file.Iv), encryptionKey);
+                    using (var stream = new MemoryStream(plainBytes))
+                    {
+                        LocalLicense license = ReadJson<LocalLicense>(stream);
+                        status = license == null ? LocalLicenseReadStatus.Corrupt : LocalLicenseReadStatus.Valid;
+                        return license;
+                    }
                 }
 
-                byte[] plainBytes = Decrypt(Convert.FromBase64String(file.CipherText), Convert.FromBase64String(file.Iv), encryptionKey);
-                using (var stream = new MemoryStream(plainBytes))
-                {
-                    LocalLicense license = ReadJson<LocalLicense>(stream);
-                    status = license == null ? LocalLicenseReadStatus.Corrupt : LocalLicenseReadStatus.Valid;
-                    return license;
-                }
+                status = LocalLicenseReadStatus.InvalidSignature;
+                return null;
             }
             catch (CryptographicException)
             {
@@ -509,8 +523,36 @@ namespace SMRI.PanelMaker
         private static string GetMachineId()
         {
             string machineGuid = ReadMachineGuid();
+            string raw = !string.IsNullOrWhiteSpace(machineGuid)
+                ? "machine-guid|" + machineGuid.Trim().ToLowerInvariant()
+                : "machine-name|" + Environment.MachineName.Trim().ToLowerInvariant();
+
+            return Sha256Hex(raw);
+        }
+
+        private static string GetLegacyMachineId()
+        {
+            string machineGuid = ReadMachineGuid();
             string raw = Environment.MachineName + "|" + Environment.UserDomainName + "|" + machineGuid;
 
+            return Sha256Hex(raw);
+        }
+
+        private static string[] GetLocalKeyIds()
+        {
+            string current = GetMachineId();
+            string legacy = GetLegacyMachineId();
+
+            if (string.Equals(current, legacy, StringComparison.OrdinalIgnoreCase))
+            {
+                return new[] { current };
+            }
+
+            return new[] { current, legacy };
+        }
+
+        private static string Sha256Hex(string raw)
+        {
             using (SHA256 sha = SHA256.Create())
             {
                 byte[] hash = sha.ComputeHash(Encoding.UTF8.GetBytes(raw));

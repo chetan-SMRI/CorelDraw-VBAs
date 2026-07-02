@@ -18,6 +18,12 @@ Compression=lzma
 SolidCompression=yes
 ArchitecturesInstallIn64BitMode=x64
 PrivilegesRequired=admin
+#ifdef SignInstaller
+SignTool=signtool /fd SHA256 /td SHA256 /tr http://timestamp.digicert.com /d "{#MyAppName}" $f
+SignedUninstaller=yes
+SignToolRetryCount=3
+SignToolRetryDelay=5000
+#endif
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
@@ -28,7 +34,11 @@ Name: "{userappdata}\Corel\CorelDRAW Graphics Suite 2024\Draw\GMS"
 Name: "{userappdata}\Corel\CorelDRAW Graphics Suite 2025\Draw\GMS"
 
 [Files]
+#ifdef SignInstaller
+Source: "..\SMRI.PanelMaker\bin\Release\SMRI.PanelMaker.exe"; DestDir: "{app}"; Flags: ignoreversion signonce
+#else
 Source: "..\SMRI.PanelMaker\bin\Release\SMRI.PanelMaker.exe"; DestDir: "{app}"; Flags: ignoreversion
+#endif
 Source: "..\SMRI.PanelMaker\bin\Release\SMRI.PanelMaker.exe.config"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\Launcher\SMRI_PanelMaker_Launcher.bas"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\Launcher\SMRI_PanelMaker_Launcher.gms"; DestDir: "{userappdata}\Corel\CorelDRAW Graphics Suite 2024\Draw\GMS"; Flags: ignoreversion

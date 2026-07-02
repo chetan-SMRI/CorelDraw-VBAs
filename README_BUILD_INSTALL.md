@@ -4,34 +4,13 @@ This project is a simple .NET Framework 4.8 Windows EXE that connects to the cur
 
 ## Before building
 
-1. Open `SMRI.PanelMaker\App.config`.
-2. The license API URL is configured as:
+The license backend is hard-coded to the production endpoints under:
 
 ```text
-https://shrimayanand.com/api/method/cdr-activator?machineId=123&licenseKey=chetan@123
+https://shrimayanand.com/api/method/coreldraw_utility.api
 ```
 
-The EXE replaces the sample query values at runtime with the real generated `machineId` and entered `licenseKey`, then sends a POST request.
-
-3. On invalid license, the API can return:
-
-```json
-{}
-```
-
-4. On valid license, the API should return:
-
-```json
-{
-  "message": {
-    "valid": true,
-    "message": "Activated",
-    "activationToken": "abcdefghijklf"
-  }
-}
-```
-
-If the nested `message.valid` is not `true`, the EXE stops before touching CorelDRAW.
+The app activates with `activate_license`, validates on startup with `validate_license`, uses `force_reauthentication` for corrupted local state or clock rollback, and can call `deactivate_license` when a logout/move flow is added.
 
 ## Build
 
@@ -80,8 +59,10 @@ C:\SMRI\PanelMaker\SMRI.PanelMaker.exe
 Activation is saved to:
 
 ```text
-C:\ProgramData\SMRI\PanelMaker\license.json
+C:\ProgramData\SMRI\PanelMaker\license.dat
 ```
+
+The license file is encrypted and signed locally. If the file is deleted or corrupted, the app will require online reauthentication.
 
 If the EXE says CorelDRAW is not running while Task Manager shows CorelDRAW, check Windows permission levels. CorelDRAW and `SMRI.PanelMaker.exe` must both run normally, or both run as administrator. The usual setup is: run CorelDRAW normally, then run SMRI Panel Maker normally from the CorelDRAW launcher macro or Start menu.
 
@@ -193,6 +174,55 @@ The installer copies:
 - `SMRI.PanelMaker.exe.config` to `C:\SMRI\PanelMaker`
 - `Launcher\SMRI_PanelMaker_Launcher.gms` to `%APPDATA%\Corel\CorelDRAW Graphics Suite 2024\Draw\GMS`
 - `Launcher\SMRI_PanelMaker_Launcher.gms` to `%APPDATA%\Corel\CorelDRAW Graphics Suite 2025\Draw\GMS`
+
+## Sign the installer for release
+
+Unsigned installers show Windows "Unknown publisher" warnings. This cannot be fixed only by changing Inno Setup text; the EXE must be signed with a real code-signing certificate.
+
+For release builds:
+
+1. Buy a code-signing certificate for the publisher name you want Windows to show, for example `SMRI`.
+2. Install Windows SDK so `signtool.exe` is available.
+3. In Inno Setup, open `Tools > Configure Sign Tools...`.
+4. Add a sign tool named:
+
+```text
+signtool
+```
+
+5. Set its command to one of these examples.
+
+For a certificate installed in the Windows certificate store:
+
+```bat
+"C:\Program Files (x86)\Windows Kits\10\bin\x64\signtool.exe" sign /a $p
+```
+
+For a `.pfx` certificate file:
+
+```bat
+"C:\Program Files (x86)\Windows Kits\10\bin\x64\signtool.exe" sign /f "C:\Path\To\certificate.pfx" /p YOUR_PFX_PASSWORD $p
+```
+
+6. Build the signed release installer:
+
+```bat
+"C:\Program Files (x86)\Inno Setup 6\ISCC.exe" /DSignInstaller Installer\SMRI.PanelMaker.iss
+```
+
+The Inno script signs:
+
+- `SMRI.PanelMaker.exe`
+- `SMRI.PanelMaker.Setup.exe`
+- the generated uninstaller
+
+After signing, verify the installer:
+
+```bat
+signtool verify /pa /v Installer\Output\SMRI.PanelMaker.Setup.exe
+```
+
+Note: a standard OV certificate changes Windows from "Unknown publisher" to your publisher name, but Microsoft SmartScreen reputation may still take some downloads/runs to build. An EV code-signing certificate usually establishes reputation faster.
 
 ## CorelDRAW launcher macro
 
