@@ -76,7 +76,9 @@ If panel widths show values like `4572` for artwork that should be `180` inches,
 
 ## Add CorelDRAW launcher macro manually
 
-Use this while testing before you build the installer.
+Use this while testing before you build the installer. For customer machines, prefer copying the compiled `.gms` macro project. Do not depend on `Tools > Scripts > Script Editor > Import File`; that can be disabled by CorelDRAW/VBA security, missing VBA components, restricted permissions, or a locked macro project.
+
+Important: a `.gms` file is not a renamed `.bas` text file. It must be a real CorelDRAW macro project saved by CorelDRAW/VBA. If the file is plain text, CorelDRAW will not show it in `Run Script`.
 
 1. Make sure these files exist:
 
@@ -85,28 +87,71 @@ C:\SMRI\PanelMaker\SMRI.PanelMaker.exe
 C:\SMRI\PanelMaker\SMRI.PanelMaker.exe.config
 ```
 
-2. Open CorelDRAW.
-3. Open `Tools > Scripts > Script Editor`.
-4. In the Script Editor, choose `File > Import File`.
-5. Import this file from the project:
+2. Close CorelDRAW.
+3. Copy this file from the project:
 
 ```text
-Launcher\SMRI_PanelMaker_Launcher.bas
+Launcher\SMRI_PanelMaker_Launcher.gms
 ```
 
-6. Save the macro project when CorelDRAW asks.
-7. Back in CorelDRAW, open `Tools > Scripts > Run Script`.
-8. Select and run:
+to the CorelDRAW user GMS folder for the installed version:
+
+```text
+%APPDATA%\Corel\CorelDRAW Graphics Suite 2024\Draw\GMS
+%APPDATA%\Corel\CorelDRAW Graphics Suite 2025\Draw\GMS
+```
+
+Create the `GMS` folder if it does not exist.
+
+4. Start CorelDRAW.
+5. Open `Tools > Scripts > Run Script`.
+6. Select and run:
 
 ```text
 SMRI_RunPanelMaker
 ```
 
-The macro simply launches:
+The `.bas` file is only source code for editing/rebuilding the launcher macro project. The `.gms` file is what should be installed. The macro simply launches:
 
 ```text
 C:\SMRI\PanelMaker\SMRI.PanelMaker.exe
 ```
+
+## Rebuild the launcher GMS file
+
+Do this once on a development PC where CorelDRAW VBA editing is working. The generated `.gms` file can then be shipped to customers by the installer.
+
+1. Close CorelDRAW.
+2. Open the CorelDRAW user GMS folder:
+
+```text
+%APPDATA%\Corel\CorelDRAW Graphics Suite 2024\Draw\GMS
+%APPDATA%\Corel\CorelDRAW Graphics Suite 2025\Draw\GMS
+```
+
+3. Start CorelDRAW.
+4. Open `Tools > Scripts > Script Editor`.
+5. Create or open a macro project named:
+
+```text
+SMRI_PanelMaker_Launcher
+```
+
+6. Add a module and paste the code from:
+
+```text
+Launcher\SMRI_PanelMaker_Launcher.bas
+```
+
+7. Save the macro project from the VBA editor.
+8. Close CorelDRAW.
+9. Copy the newly created real `.gms` file from the CorelDRAW `GMS` folder back into this project:
+
+```text
+Launcher\SMRI_PanelMaker_Launcher.gms
+```
+
+The real `.gms` should be a binary/compound macro project and will usually be much larger than the `.bas` source file. If it opens in Notepad as readable text, it is not a valid `.gms`.
 
 ## Create a CorelDRAW toolbar button
 
@@ -114,7 +159,7 @@ For commercial use, the button should point to the launcher macro, not directly 
 
 First make sure the launcher macro is installed and visible in CorelDRAW:
 
-1. Copy or import `Launcher\SMRI_PanelMaker_Launcher.bas`.
+1. Copy `Launcher\SMRI_PanelMaker_Launcher.gms` to the user's CorelDRAW `GMS` folder, or run the installer.
 2. Restart CorelDRAW.
 3. Confirm that this macro appears in the Scripts list:
 
