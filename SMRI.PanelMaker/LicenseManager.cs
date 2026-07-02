@@ -16,6 +16,7 @@ namespace SMRI.PanelMaker
     {
         private const string ProductName = "SMRI Panel Maker";
         private const string ApiBaseUrl = "https://shrimayanand.com/api/method/coreldraw_utility.api.";
+        private const int OnlineValidationIntervalDays = 5;
         private const int ValidationGraceDays = 30;
         private static readonly TimeSpan ClockTolerance = TimeSpan.FromMinutes(5);
         private static readonly byte[] CryptoSalt = Encoding.UTF8.GetBytes("SMRI.PanelMaker.LocalLicense.v1");
@@ -66,6 +67,11 @@ namespace SMRI.PanelMaker
             {
                 return RequireForceReauthentication(existing, machineId,
                     "Your saved subscription date has expired. Please connect to the internet to revalidate your license.");
+            }
+
+            if (!IsOnlineValidationDue(existing, utcNow))
+            {
+                return true;
             }
 
             ValidationAttempt validation = TryValidateLicense(existing, machineId);
@@ -302,6 +308,18 @@ namespace SMRI.PanelMaker
             return TryParseDate(license.SubscriptionEnd, out subscriptionEnd) && utcNow.Date > subscriptionEnd.Date;
         }
 
+        private static bool IsOnlineValidationDue(LocalLicense license, DateTime utcNow)
+        {
+            DateTime lastOnlineValidation;
+            if (!TryParseDateTime(license.LastOnlineValidation, out lastOnlineValidation) &&
+                !TryParseDateTime(license.LastServerTime, out lastOnlineValidation))
+            {
+                return true;
+            }
+
+            return utcNow.Date >= lastOnlineValidation.Date.AddDays(OnlineValidationIntervalDays);
+        }
+
         private static void SaveFromActivation(string licenseKey, string machineId, ActivationResponse response)
         {
             SaveLocalLicense(new LocalLicense
@@ -310,6 +328,7 @@ namespace SMRI.PanelMaker
                 MachineId = machineId,
                 SessionToken = response.SessionToken,
                 LastServerTime = response.ServerTime,
+                LastOnlineValidation = response.ServerTime,
                 NextValidationDue = response.NextValidationDue,
                 SubscriptionEnd = response.SubscriptionEnd
             });
@@ -323,6 +342,7 @@ namespace SMRI.PanelMaker
                 MachineId = machineId,
                 SessionToken = existing.SessionToken,
                 LastServerTime = response.ServerTime,
+                LastOnlineValidation = response.ServerTime,
                 NextValidationDue = response.NextValidationDue,
                 SubscriptionEnd = response.SubscriptionEnd
             });
@@ -943,6 +963,9 @@ namespace SMRI.PanelMaker
 
             [DataMember(Name = "last_server_time")]
             public string LastServerTime { get; set; }
+
+            [DataMember(Name = "last_online_validation")]
+            public string LastOnlineValidation { get; set; }
 
             [DataMember(Name = "next_validation_due")]
             public string NextValidationDue { get; set; }
