@@ -1,6 +1,6 @@
 # SMRI Panel Maker for Adobe Photoshop
 
-The `SMRI_PhotoshopPanelMaker.jsx` file is a directly runnable Photoshop script. It requires no license, installer, compilation, Illustrator, or third-party extension.
+The `SMRI_PhotoshopPanelMaker_RawCode.jsx` file is a directly runnable Photoshop script. It requires no license, installer, compilation, Illustrator, or third-party extension.
 
 ## What it does
 
