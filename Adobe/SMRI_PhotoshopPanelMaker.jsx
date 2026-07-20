@@ -1,7 +1,8 @@
 #target photoshop
 app.bringToFront();
 
-/* SMRI Panel Maker for Adobe Photoshop — direct-running, unlicensed JSX. */
+/* SMRI Panel Maker for Adobe Photoshop — direct-running, licensed JSX. Copyright (c) 2026 SMRI. All rights reserved. */
+/* Distributing / Copying / Modifying this code without permission is strictly prohibited. */
 (function () {
     var EPS = 0.001;
 
