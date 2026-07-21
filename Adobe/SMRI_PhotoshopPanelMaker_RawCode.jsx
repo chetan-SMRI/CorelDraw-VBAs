@@ -225,6 +225,99 @@ app.bringToFront();
         if (horizontal) label.rotate(-90, AnchorPosition.BOTTOMLEFT);
     }
 
+    function addSummaryText(doc, name, text, x, y, size, bold, centered) {
+        var layer = doc.artLayers.add();
+        layer.kind = LayerKind.TEXT;
+        layer.name = name;
+        layer.textItem.contents = text;
+        layer.textItem.position = [UnitValue(x, "px"), UnitValue(y, "px")];
+        layer.textItem.size = UnitValue(size, "pt");
+        layer.textItem.color = black();
+        if (centered) layer.textItem.justification = Justification.CENTER;
+        try {
+            layer.textItem.font = bold ? "Arial-BoldMT" : "ArialMT";
+        } catch (fontError) {}
+        return layer;
+    }
+
+    function createSummaryDocument(base, sourceName, widthIn, heightIn, horizontal, overlap, totalParts) {
+        var summaryDpi = 150;
+        var pageW = Math.round(11.69 * summaryDpi);
+        var pageH = Math.round(8.27 * summaryDpi);
+        var margin = Math.round(0.45 * summaryDpi);
+        var doc = app.documents.add(UnitValue(pageW, "px"), UnitValue(pageH, "px"), summaryDpi,
+            base + "_Summary_A4_Landscape", NewDocumentMode.RGB, DocumentFill.WHITE);
+
+        addSummaryText(doc, "File name", sourceName, Math.round(pageW / 2),
+            Math.round(0.55 * summaryDpi), 24, true, true);
+        addSummaryText(doc, "Artwork information",
+            "Size: " + fmt(widthIn) + " x " + fmt(heightIn) + " in    |    Overlap: " +
+            fmt(overlap) + " in    |    Total Parts: " + totalParts,
+            Math.round(pageW / 2), Math.round(0.92 * summaryDpi), 16, true, true);
+
+        var columns;
+        if (totalParts <= 5) {
+            columns = totalParts;
+        } else if (totalParts <= 10) {
+            // Balanced two-row worker sheet: 6=3+3, 8=4+4, 10=5+5.
+            columns = Math.ceil(totalParts / 2);
+        } else {
+            columns = Math.max(1, Math.ceil(Math.sqrt(totalParts * 1.55)));
+        }
+        var rows = Math.ceil(totalParts / columns);
+        return {
+            doc: doc,
+            dpi: summaryDpi,
+            pageW: pageW,
+            pageH: pageH,
+            margin: margin,
+            bodyTop: Math.round(1.28 * summaryDpi),
+            columns: columns,
+            rows: rows
+        };
+    }
+
+    function addPanelToSummary(layout, panelDoc, index, totalParts, panelWidth, panelHeight) {
+        var summaryDoc = layout.doc;
+        var temp = panelDoc.duplicate("SMRI_Summary_Temporary", true);
+        app.activeDocument = temp;
+        var thumb = temp.activeLayer.duplicate(summaryDoc, ElementPlacement.PLACEATBEGINNING);
+        temp.close(SaveOptions.DONOTSAVECHANGES);
+        app.activeDocument = summaryDoc;
+
+        var column = index % layout.columns;
+        var row = Math.floor(index / layout.columns);
+        var usableW = layout.pageW - layout.margin * 2;
+        var usableH = layout.pageH - layout.bodyTop - layout.margin;
+        var cellW = usableW / layout.columns;
+        var cellH = usableH / layout.rows;
+        var pad = Math.max(6, Math.round(0.08 * layout.dpi));
+        var labelH = Math.round(0.32 * layout.dpi);
+        var targetW = cellW - pad * 2;
+        var targetH = cellH - labelH - pad * 2;
+
+        var bounds = thumb.bounds;
+        var thumbW = bounds[2].as("px") - bounds[0].as("px");
+        var thumbH = bounds[3].as("px") - bounds[1].as("px");
+        var scale = Math.min(targetW / thumbW, targetH / thumbH) * 100;
+        if (scale > 100) scale = 100;
+        thumb.resize(scale, scale, AnchorPosition.MIDDLECENTER);
+        bounds = thumb.bounds;
+        var centerX = (bounds[0].as("px") + bounds[2].as("px")) / 2;
+        var centerY = (bounds[1].as("px") + bounds[3].as("px")) / 2;
+        var targetX = layout.margin + column * cellW + cellW / 2;
+        var targetY = layout.bodyTop + row * cellH + labelH + (cellH - labelH) / 2;
+        thumb.translate(targetX - centerX, targetY - centerY);
+        thumb.name = "Part " + (index + 1) + " image";
+
+        var fontSize = Math.max(8, Math.min(14, Math.floor(cellW * 72 / layout.dpi / 10)));
+        var label = "Part " + (index + 1) + "/" + totalParts +
+            " | W: " + fmt(panelWidth) + "in";
+        addSummaryText(summaryDoc, "Part " + (index + 1) + " label", label,
+            Math.round(targetX), Math.round(layout.bodyTop + row * cellH + labelH * 0.68),
+            fontSize, true, true);
+    }
+
     if (app.documents.length === 0) {
         alert("Open a Photoshop document first.", "SMRI Photoshop Panel Maker"); return;
     }
@@ -260,9 +353,13 @@ app.bringToFront();
     var dpi = source.resolution;
     var fullW = Math.round(source.width.as("px")), fullH = Math.round(source.height.as("px"));
     var positionIn = 0, created = 0, summary = "Created panel documents:\n";
+    var summaryDoc = null, summaryLayout = null;
     var base = safeName(source.name.replace(/\.[^\.]+$/, ""));
 
     try {
+        summaryLayout = createSummaryDocument(base, source.name, widthIn, heightIn,
+            horizontal, overlap, panels.length);
+        summaryDoc = summaryLayout.doc;
         for (var i = 0; i < panels.length; i++) {
             var remaining = span - positionIn;
             var panelIn = Math.min(panels[i], remaining);
@@ -275,7 +372,11 @@ app.bringToFront();
             var endPx = Math.round((positionIn + panelIn) * dpi);
             if (horizontal) panelDoc.crop([0, startPx, fullW, endPx]);
             else panelDoc.crop([startPx, 0, endPx, fullH]);
-            var infoText = "Part " + (i + 1) + " | Original: " + fmt(widthIn) + " x " + fmt(heightIn) +
+            addPanelToSummary(summaryLayout, panelDoc, i, panels.length,
+                horizontal ? widthIn : panelIn, horizontal ? panelIn : heightIn);
+            app.activeDocument = panelDoc;
+            var infoText = "Part " + (i + 1) + " / " + panels.length +
+                " | Original: " + fmt(widthIn) + " x " + fmt(heightIn) +
                 " in | " + (horizontal ? "Part Height: " : "Part Width: ") + fmt(panelIn) +
                 " in | Overlap: " + fmt(overlap) + " in";
             addProductionDetails(panelDoc, horizontal, i, panels.length, overlap, infoText, yes(markersText));
@@ -290,7 +391,8 @@ app.bringToFront();
     } finally {
         app.preferences.rulerUnits = oldUnits;
     }
-    app.activeDocument = source;
+    app.activeDocument = summaryDoc || source;
     alert(created + " panels created. The original document was not changed.\n\n" + summary +
-        "\nSave the new panel documents when ready.", "SMRI Photoshop Panel Maker");
+        "\nAn A4 landscape summary document was also created. Save the new documents when ready.",
+        "SMRI Photoshop Panel Maker");
 }());
