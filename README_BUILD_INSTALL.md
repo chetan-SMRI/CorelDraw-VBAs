@@ -2,15 +2,23 @@
 
 This project is a simple .NET Framework 4.8 Windows EXE that connects to the currently running CorelDRAW instance through COM automation and modifies the active document. The same EXE can be used for CorelDRAW 2024 and 2025.
 
-## Before building
+## Offline one-year activation
 
-The license backend is hard-coded to the production endpoints under:
+Activation uses the same 8-digit, minute-based code as the Adobe distributable. There are no license API calls, online checks, accounts, or server dependencies.
 
-```text
-https://shrimayanand.com/api/method/coreldraw_utility.api
+On your own computer, run:
+
+```sh
+python3 Adobe/TOTP_gen.py
 ```
 
-The app activates with `activate_license`, validates on startup with `validate_license`, uses `force_reauthentication` for corrupted local state or clock rollback, and can call `deactivate_license` when a logout/move flow is added.
+Send the code immediately to the customer. CorelDRAW accepts the current minute and one minute either side; both computers need correct clocks. Keep the generator and development source private; the installer only includes the EXE and launcher files.
+
+Successful activation grants one calendar year from activation (UTC). Expiry requires a fresh code and starts a new one-year term. Each launch checks the saved expiry and records the latest use time; moving the clock backward by more than five minutes requires activation again. Activation is scoped to the Windows user on that computer.
+
+This deliberately matches Adobe's simple custom time-code formula, not standard authenticator-app TOTP. Codes are shared across Adobe and CorelDRAW and can be reused during the accepted window. This is basic offline licensing: it cannot enforce remote revocation or global single-device limits, and a determined user can bypass local checks or restore old state.
+
+Existing online licenses require this offline activation once after upgrading. Old files under ProgramData are ignored; no server migration is attempted.
 
 ## Build
 
@@ -52,17 +60,17 @@ SMRI.PanelMaker.exe.config
 C:\SMRI\PanelMaker\SMRI.PanelMaker.exe
 ```
 
-7. On first run, enter the license key.
+7. On first run, enter the current 8-digit activation code.
 8. Choose a saved width preset, create/update a preset, or enter one-time custom widths.
 9. Choose vertical or horizontal cuts, enter overlap, and choose whether to add outside bleeding/overlap markers.
 
 Activation is saved to:
 
 ```text
-C:\ProgramData\SMRI\PanelMaker\license.dat
+%LOCALAPPDATA%\SMRI\PanelMaker\license.dat
 ```
 
-The license file is encrypted and signed locally. If the file is deleted or corrupted, the app will require online reauthentication.
+The license file is protected with Windows DPAPI for the current user. Missing, edited, unreadable encrypted data, or expired activation requires a fresh code. A file access or save failure blocks startup with an error. Normal launches preserve the original expiry. No administrator rights or internet connection are needed for activation.
 
 If the EXE says CorelDRAW is not running while Task Manager shows CorelDRAW, check Windows permission levels. CorelDRAW and `SMRI.PanelMaker.exe` must both run normally, or both run as administrator. The usual setup is: run CorelDRAW normally, then run SMRI Panel Maker normally from the CorelDRAW launcher macro or Start menu.
 
