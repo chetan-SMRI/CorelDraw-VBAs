@@ -1,6 +1,7 @@
 Option Explicit
 
 Private Const BLEND_MARKER_LENGTH As Double = 1
+Private Const BLEND_MARKER_OUTSIDE_LENGTH As Double = 0.5
 
 Private Function CeilD(ByVal x As Double) As Long
     If x <= Int(x) Then
@@ -103,25 +104,25 @@ Private Function IsYes(ByVal valueText As String) As Boolean
 End Function
 
 Private Sub CreateHorizontalTMarker(ByVal markerX As Double, ByVal edgeY As Double, _
-    ByVal outsideDir As Double, ByVal alongDir As Double, ByVal markerLen As Double, _
+    ByVal outsideDir As Double, ByVal alongDir As Double, ByVal overlapLen As Double, _
     ByRef panelShapes As ShapeRange)
 
     Dim outerY As Double
-    outerY = edgeY + (outsideDir * markerLen)
+    outerY = edgeY + (outsideDir * BLEND_MARKER_OUTSIDE_LENGTH)
 
     CreateBlendMarker markerX, edgeY, markerX, outerY, panelShapes
-    CreateBlendMarker markerX, outerY, markerX + (alongDir * markerLen), outerY, panelShapes
+    CreateBlendMarker markerX, outerY, markerX + (alongDir * overlapLen), outerY, panelShapes
 End Sub
 
 Private Sub CreateVerticalTMarker(ByVal edgeX As Double, ByVal markerY As Double, _
-    ByVal outsideDir As Double, ByVal alongDir As Double, ByVal markerLen As Double, _
+    ByVal outsideDir As Double, ByVal alongDir As Double, ByVal overlapLen As Double, _
     ByRef panelShapes As ShapeRange)
 
     Dim outerX As Double
-    outerX = edgeX + (outsideDir * markerLen)
+    outerX = edgeX + (outsideDir * BLEND_MARKER_OUTSIDE_LENGTH)
 
     CreateBlendMarker edgeX, markerY, outerX, markerY, panelShapes
-    CreateBlendMarker outerX, markerY, outerX, markerY + (alongDir * markerLen), panelShapes
+    CreateBlendMarker outerX, markerY, outerX, markerY + (alongDir * overlapLen), panelShapes
 End Sub
 
 Private Sub AddVerticalPanelSeamMarkers(ByVal seamX As Double, ByVal startY As Double, ByVal panelH As Double, _
