@@ -64,13 +64,13 @@ C:\SMRI\PanelMaker\SMRI.PanelMaker.exe
 
 Do not run CorelDRAW or Panel Maker as administrator unless both programs are running as administrator.
 
-On first use, Panel Maker asks for an 8-digit activation code. Generate it from the project folder with:
+On first use, Panel Maker asks how many days the license should remain valid and then asks for an 8-digit activation code. Generate the code from the project folder with:
 
 ```sh
 python3 Adobe/TOTP_gen.py
 ```
 
-The code is time-sensitive, so enter it immediately. Activation lasts for one year and does not require internet access.
+The code is time-sensitive, so enter it immediately. The activation lasts for the number of days entered and does not require internet access.
 
 ## Update the EXE
 

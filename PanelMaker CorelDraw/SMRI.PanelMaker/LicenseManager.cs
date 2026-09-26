@@ -30,8 +30,22 @@ namespace SMRI.PanelMaker
                     return true;
                 }
 
+                string validityText = Interaction.InputBox(
+                    "Enter the number of days this license should remain valid:",
+                    ProductName + " Activation", "365");
+                if (string.IsNullOrWhiteSpace(validityText)) return false;
+
+                int validityDays;
+                if (!int.TryParse(validityText.Trim(), NumberStyles.None, CultureInfo.InvariantCulture,
+                        out validityDays) || validityDays < 1 || validityDays > 36500)
+                {
+                    MessageBox.Show("Enter a whole number from 1 to 36500 days.",
+                        ProductName, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return false;
+                }
+
                 string code = Interaction.InputBox(
-                    "This computer is not activated, or its one-year activation has expired.\n" +
+                    "This computer is not activated, or its activation has expired.\n" +
                     "Contact SMRI for the current 8-digit activation code, then enter it here:",
                     ProductName + " Activation", "");
                 if (string.IsNullOrWhiteSpace(code)) return false;
@@ -44,7 +58,7 @@ namespace SMRI.PanelMaker
                     return false;
                 }
 
-                expires = now.AddYears(1);
+                expires = now.AddDays(validityDays);
                 SaveLicense(now, expires, now);
                 MessageBox.Show("Activation successful. Licensed until " +
                     expires.ToLocalTime().ToString("d", CultureInfo.CurrentCulture) + ".",
@@ -82,7 +96,8 @@ namespace SMRI.PanelMaker
         internal static bool IsLicenseValid(DateTime activated, DateTime expires, DateTime lastSeen, DateTime now)
         {
             return activated >= Epoch && activated.Year < 9999 &&
-                expires == activated.AddYears(1) && lastSeen >= activated && lastSeen < expires &&
+                expires > activated && (expires - activated).TotalDays <= 36500 &&
+                lastSeen >= activated && lastSeen < expires &&
                 now >= activated.AddMinutes(-5) && now < expires && now >= lastSeen.AddMinutes(-5);
         }
 
