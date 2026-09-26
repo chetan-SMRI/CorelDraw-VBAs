@@ -87,11 +87,14 @@ Private Function MarkerLength(ByVal overlap As Double) As Double
     End If
 End Function
 
-Private Sub CreateBlendMarker(ByVal x1 As Double, ByVal y1 As Double, ByVal x2 As Double, ByVal y2 As Double)
+Private Sub CreateBlendMarker(ByVal x1 As Double, ByVal y1 As Double, ByVal x2 As Double, ByVal y2 As Double, _
+    ByRef panelShapes As ShapeRange)
+
     Dim marker As Shape
     Set marker = ActiveLayer.CreateLineSegment(x1, y1, x2, y2)
     marker.Name = "Blend_Marker"
     marker.Outline.Width = 0.01
+    panelShapes.Add marker
 End Sub
 
 Private Function IsYes(ByVal valueText As String) As Boolean
@@ -100,48 +103,50 @@ Private Function IsYes(ByVal valueText As String) As Boolean
 End Function
 
 Private Sub CreateHorizontalTMarker(ByVal markerX As Double, ByVal edgeY As Double, _
-    ByVal outsideDir As Double, ByVal alongDir As Double, ByVal markerLen As Double)
+    ByVal outsideDir As Double, ByVal alongDir As Double, ByVal markerLen As Double, _
+    ByRef panelShapes As ShapeRange)
 
     Dim outerY As Double
     outerY = edgeY + (outsideDir * markerLen)
 
-    CreateBlendMarker markerX, edgeY, markerX, outerY
-    CreateBlendMarker markerX, outerY, markerX + (alongDir * markerLen), outerY
+    CreateBlendMarker markerX, edgeY, markerX, outerY, panelShapes
+    CreateBlendMarker markerX, outerY, markerX + (alongDir * markerLen), outerY, panelShapes
 End Sub
 
 Private Sub CreateVerticalTMarker(ByVal edgeX As Double, ByVal markerY As Double, _
-    ByVal outsideDir As Double, ByVal alongDir As Double, ByVal markerLen As Double)
+    ByVal outsideDir As Double, ByVal alongDir As Double, ByVal markerLen As Double, _
+    ByRef panelShapes As ShapeRange)
 
     Dim outerX As Double
     outerX = edgeX + (outsideDir * markerLen)
 
-    CreateBlendMarker edgeX, markerY, outerX, markerY
-    CreateBlendMarker outerX, markerY, outerX, markerY + (alongDir * markerLen)
+    CreateBlendMarker edgeX, markerY, outerX, markerY, panelShapes
+    CreateBlendMarker outerX, markerY, outerX, markerY + (alongDir * markerLen), panelShapes
 End Sub
 
 Private Sub AddVerticalPanelSeamMarkers(ByVal seamX As Double, ByVal startY As Double, ByVal panelH As Double, _
-    ByVal alongDir As Double, ByVal markerLen As Double)
+    ByVal alongDir As Double, ByVal markerLen As Double, ByRef panelShapes As ShapeRange)
 
-    CreateHorizontalTMarker seamX, startY, -1, alongDir, markerLen
+    CreateHorizontalTMarker seamX, startY, -1, alongDir, markerLen, panelShapes
 
     If panelH > 0 Then
-        CreateHorizontalTMarker seamX, startY + panelH, 1, alongDir, markerLen
+        CreateHorizontalTMarker seamX, startY + panelH, 1, alongDir, markerLen, panelShapes
     End If
 End Sub
 
 Private Sub AddHorizontalPanelSeamMarkers(ByVal startX As Double, ByVal seamY As Double, ByVal panelW As Double, _
-    ByVal alongDir As Double, ByVal markerLen As Double)
+    ByVal alongDir As Double, ByVal markerLen As Double, ByRef panelShapes As ShapeRange)
 
-    CreateVerticalTMarker startX, seamY, -1, alongDir, markerLen
+    CreateVerticalTMarker startX, seamY, -1, alongDir, markerLen, panelShapes
 
     If panelW > 0 Then
-        CreateVerticalTMarker startX + panelW, seamY, 1, alongDir, markerLen
+        CreateVerticalTMarker startX + panelW, seamY, 1, alongDir, markerLen, panelShapes
     End If
 End Sub
 
 Private Sub AddBlendMarkers(ByVal destX As Double, ByVal destY As Double, ByVal panelW As Double, _
     ByVal panelH As Double, ByVal panelIndex As Long, ByVal panelCount As Long, _
-    ByVal horizontalCut As Boolean, ByVal overlap As Double)
+    ByVal horizontalCut As Boolean, ByVal overlap As Double, ByRef panelShapes As ShapeRange)
 
     Dim markerLen As Double
     markerLen = MarkerLength(overlap)
@@ -150,19 +155,19 @@ Private Sub AddBlendMarkers(ByVal destX As Double, ByVal destY As Double, ByVal 
 
     If horizontalCut Then
         If panelIndex > 0 Then
-            AddHorizontalPanelSeamMarkers destX, destY, panelW, 1, markerLen
+            AddHorizontalPanelSeamMarkers destX, destY, panelW, 1, markerLen, panelShapes
         End If
 
         If panelIndex < panelCount - 1 Then
-            AddHorizontalPanelSeamMarkers destX, destY + panelH - markerLen, panelW, 1, markerLen
+            AddHorizontalPanelSeamMarkers destX, destY + panelH - markerLen, panelW, 1, markerLen, panelShapes
         End If
     Else
         If panelIndex > 0 Then
-            AddVerticalPanelSeamMarkers destX, destY, panelH, 1, markerLen
+            AddVerticalPanelSeamMarkers destX, destY, panelH, 1, markerLen, panelShapes
         End If
 
         If panelIndex < panelCount - 1 Then
-            AddVerticalPanelSeamMarkers destX + panelW - markerLen, destY, panelH, 1, markerLen
+            AddVerticalPanelSeamMarkers destX + panelW - markerLen, destY, panelH, 1, markerLen, panelShapes
         End If
     End If
 End Sub
@@ -471,6 +476,8 @@ Sub SMRI_AutoPanelPowerClips()
     Dim createdPanels As Long
     Dim horizontalLabelX As Double
     Dim horizontalLabelY As Double
+    Dim panelShapes As ShapeRange
+    Dim panelGroup As Shape
 
     ActiveDocument.BeginCommandGroup "SMRI Auto Panel PowerClips"
 
@@ -482,6 +489,8 @@ Sub SMRI_AutoPanelPowerClips()
     createdPanels = 0
 
     For i = 0 To panels - 1
+
+        Set panelShapes = New ShapeRange
 
         If horizontalCut Then
             panelTop = currentSourceY
@@ -498,9 +507,10 @@ Sub SMRI_AutoPanelPowerClips()
             Dim hBox As Shape
             Set hBox = ActiveLayer.CreateRectangle2(destX, destY, w, panelH)
 
-            hBox.Name = "Panel_" & Format(i + 1, "00")
+            hBox.Name = "Panel_Clip_" & Format(i + 1, "00")
             hBox.Fill.ApplyNoFill
-            hBox.Outline.Width = 0.01
+            hBox.Outline.SetNoOutline
+            panelShapes.Add hBox
 
             Dim hDup As ShapeRange
             Set hDup = src.Duplicate
@@ -509,7 +519,7 @@ Sub SMRI_AutoPanelPowerClips()
 
             hDup.AddToPowerClip hBox, cdrFalse
             If addBleedMarkers Then
-                AddBlendMarkers destX, destY, w, panelH, i, panels, True, overlap
+                AddBlendMarkers destX, destY, w, panelH, i, panels, True, overlap, panelShapes
             End If
 
             Dim hLabel As Shape
@@ -527,6 +537,10 @@ Sub SMRI_AutoPanelPowerClips()
             hLabel.RotationCenterX = horizontalLabelX
             hLabel.RotationCenterY = horizontalLabelY
             hLabel.Rotate 90
+            panelShapes.Add hLabel
+
+            Set panelGroup = panelShapes.Group
+            panelGroup.Name = "Panel_" & Format(i + 1, "00")
 
             currentSourceY = currentSourceY + panelH - overlap
             currentDestY = currentDestY + panelH + gap
@@ -544,9 +558,10 @@ Sub SMRI_AutoPanelPowerClips()
             Dim box As Shape
             Set box = ActiveLayer.CreateRectangle2(destX, startY, panelW, h)
 
-            box.Name = "Panel_" & Format(i + 1, "00")
+            box.Name = "Panel_Clip_" & Format(i + 1, "00")
             box.Fill.ApplyNoFill
-            box.Outline.Width = 0.01
+            box.Outline.SetNoOutline
+            panelShapes.Add box
 
             Dim dup As ShapeRange
             Set dup = src.Duplicate
@@ -555,7 +570,7 @@ Sub SMRI_AutoPanelPowerClips()
 
             dup.AddToPowerClip box, cdrFalse
             If addBleedMarkers Then
-                AddBlendMarkers destX, startY, panelW, h, i, panels, False, overlap
+                AddBlendMarkers destX, startY, panelW, h, i, panels, False, overlap, panelShapes
             End If
 
             Dim label As Shape
@@ -567,6 +582,10 @@ Sub SMRI_AutoPanelPowerClips()
             label.Text.Story.Size = 18
             label.Text.Story.Font = "Arial"
             label.Text.Story.Bold = True
+            panelShapes.Add label
+
+            Set panelGroup = panelShapes.Group
+            panelGroup.Name = "Panel_" & Format(i + 1, "00")
 
             currentSourceX = currentSourceX + panelW - overlap
             currentDestX = currentDestX + panelW + gap
