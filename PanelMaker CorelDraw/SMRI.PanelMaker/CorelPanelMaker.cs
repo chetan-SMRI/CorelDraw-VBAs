@@ -111,6 +111,8 @@ namespace SMRI.PanelMaker
             {
                 for (int i = 0; i < panelWidths.Length; i++)
                 {
+                    dynamic panelShapes = app.CreateShapeRange();
+
                     if (horizontalCut)
                     {
                         double panelTop = currentSourceY;
@@ -135,15 +137,16 @@ namespace SMRI.PanelMaker
                         box.Name = "Panel_Clip_" + (i + 1).ToString("00", CultureInfo.InvariantCulture);
                         box.Fill.ApplyNoFill();
                         box.Outline.SetNoOutline();
+                        panelShapes.Add(box);
 
                         dynamic duplicate = source.Duplicate();
                         duplicate.Move(destX - x, destY - panelTop);
                         duplicate.AddToPowerClip(box, CdrFalse);
-                        box.CreateSelection();
 
                         if (addBleedMarkers)
                         {
-                            AddBlendMarkers(activeLayer, destX, destY, width, panelHeight, i, panelWidths.Length, true, overlap);
+                            AddBlendMarkers(activeLayer, panelShapes, destX, destY, width, panelHeight,
+                                i, panelWidths.Length, true, overlap);
                         }
 
                         double horizontalLabelX = destX - 0.35;
@@ -160,9 +163,9 @@ namespace SMRI.PanelMaker
                         label.RotationCenterX = horizontalLabelX;
                         label.RotationCenterY = horizontalLabelY;
                         label.Rotate(90);
-                        label.AddToSelection();
+                        panelShapes.Add(label);
 
-                        dynamic panelGroup = app.ActiveSelection.Group();
+                        dynamic panelGroup = panelShapes.Group();
                         panelGroup.Name = "Panel_" + (i + 1).ToString("00", CultureInfo.InvariantCulture);
 
                         currentSourceY += panelHeight - overlap;
@@ -191,15 +194,16 @@ namespace SMRI.PanelMaker
                         box.Name = "Panel_Clip_" + (i + 1).ToString("00", CultureInfo.InvariantCulture);
                         box.Fill.ApplyNoFill();
                         box.Outline.SetNoOutline();
+                        panelShapes.Add(box);
 
                         dynamic duplicate = source.Duplicate();
                         duplicate.Move(destX - panelLeft, startY - y);
                         duplicate.AddToPowerClip(box, CdrFalse);
-                        box.CreateSelection();
 
                         if (addBleedMarkers)
                         {
-                            AddBlendMarkers(activeLayer, destX, startY, panelWidth, height, i, panelWidths.Length, false, overlap);
+                            AddBlendMarkers(activeLayer, panelShapes, destX, startY, panelWidth, height,
+                                i, panelWidths.Length, false, overlap);
                         }
 
                         dynamic label = activeLayer.CreateArtisticText(destX, startY + height + 0.14,
@@ -211,9 +215,9 @@ namespace SMRI.PanelMaker
                         label.Text.Story.Size = 18;
                         label.Text.Story.Font = "Arial";
                         label.Text.Story.Bold = true;
-                        label.AddToSelection();
+                        panelShapes.Add(label);
 
-                        dynamic panelGroup = app.ActiveSelection.Group();
+                        dynamic panelGroup = panelShapes.Group();
                         panelGroup.Name = "Panel_" + (i + 1).ToString("00", CultureInfo.InvariantCulture);
 
                         currentSourceX += panelWidth - overlap;
@@ -729,54 +733,60 @@ namespace SMRI.PanelMaker
                 : BlendMarkerLength;
         }
 
-        private static void CreateBlendMarker(dynamic activeLayer, double x1, double y1, double x2, double y2)
+        private static void CreateBlendMarker(dynamic activeLayer, dynamic panelShapes,
+            double x1, double y1, double x2, double y2)
         {
             dynamic marker = activeLayer.CreateLineSegment(x1, y1, x2, y2);
             marker.Name = "Blend_Marker";
             marker.Outline.Width = 0.01;
-            marker.AddToSelection();
+            panelShapes.Add(marker);
         }
 
-        private static void CreateHorizontalTMarker(dynamic activeLayer, double markerX, double edgeY,
-            double outsideDir, double alongDir, double overlapLen)
+        private static void CreateHorizontalTMarker(dynamic activeLayer, dynamic panelShapes,
+            double markerX, double edgeY, double outsideDir, double alongDir, double overlapLen)
         {
             double outerY = edgeY + (outsideDir * BlendMarkerOutsideLength);
-            CreateBlendMarker(activeLayer, markerX, edgeY, markerX, outerY);
-            CreateBlendMarker(activeLayer, markerX, outerY, markerX + (alongDir * overlapLen), outerY);
+            CreateBlendMarker(activeLayer, panelShapes, markerX, edgeY, markerX, outerY);
+            CreateBlendMarker(activeLayer, panelShapes, markerX, outerY,
+                markerX + (alongDir * overlapLen), outerY);
         }
 
-        private static void CreateVerticalTMarker(dynamic activeLayer, double edgeX, double markerY,
-            double outsideDir, double alongDir, double overlapLen)
+        private static void CreateVerticalTMarker(dynamic activeLayer, dynamic panelShapes,
+            double edgeX, double markerY, double outsideDir, double alongDir, double overlapLen)
         {
             double outerX = edgeX + (outsideDir * BlendMarkerOutsideLength);
-            CreateBlendMarker(activeLayer, edgeX, markerY, outerX, markerY);
-            CreateBlendMarker(activeLayer, outerX, markerY, outerX, markerY + (alongDir * overlapLen));
+            CreateBlendMarker(activeLayer, panelShapes, edgeX, markerY, outerX, markerY);
+            CreateBlendMarker(activeLayer, panelShapes, outerX, markerY,
+                outerX, markerY + (alongDir * overlapLen));
         }
 
-        private static void AddVerticalPanelSeamMarkers(dynamic activeLayer, double seamX, double startY,
-            double panelHeight, double alongDir, double markerLen)
+        private static void AddVerticalPanelSeamMarkers(dynamic activeLayer, dynamic panelShapes,
+            double seamX, double startY, double panelHeight, double alongDir, double markerLen)
         {
-            CreateHorizontalTMarker(activeLayer, seamX, startY, -1, alongDir, markerLen);
+            CreateHorizontalTMarker(activeLayer, panelShapes, seamX, startY, -1, alongDir, markerLen);
 
             if (panelHeight > 0)
             {
-                CreateHorizontalTMarker(activeLayer, seamX, startY + panelHeight, 1, alongDir, markerLen);
+                CreateHorizontalTMarker(activeLayer, panelShapes, seamX,
+                    startY + panelHeight, 1, alongDir, markerLen);
             }
         }
 
-        private static void AddHorizontalPanelSeamMarkers(dynamic activeLayer, double startX, double seamY,
-            double panelWidth, double alongDir, double markerLen)
+        private static void AddHorizontalPanelSeamMarkers(dynamic activeLayer, dynamic panelShapes,
+            double startX, double seamY, double panelWidth, double alongDir, double markerLen)
         {
-            CreateVerticalTMarker(activeLayer, startX, seamY, -1, alongDir, markerLen);
+            CreateVerticalTMarker(activeLayer, panelShapes, startX, seamY, -1, alongDir, markerLen);
 
             if (panelWidth > 0)
             {
-                CreateVerticalTMarker(activeLayer, startX + panelWidth, seamY, 1, alongDir, markerLen);
+                CreateVerticalTMarker(activeLayer, panelShapes,
+                    startX + panelWidth, seamY, 1, alongDir, markerLen);
             }
         }
 
-        private static void AddBlendMarkers(dynamic activeLayer, double destX, double destY, double panelWidth,
-            double panelHeight, int panelIndex, int panelCount, bool horizontalCut, double overlap)
+        private static void AddBlendMarkers(dynamic activeLayer, dynamic panelShapes,
+            double destX, double destY, double panelWidth, double panelHeight,
+            int panelIndex, int panelCount, bool horizontalCut, double overlap)
         {
             double markerLen = MarkerLength(overlap);
             if (markerLen <= 0)
@@ -788,24 +798,28 @@ namespace SMRI.PanelMaker
             {
                 if (panelIndex > 0)
                 {
-                    AddHorizontalPanelSeamMarkers(activeLayer, destX, destY, panelWidth, 1, markerLen);
+                    AddHorizontalPanelSeamMarkers(activeLayer, panelShapes,
+                        destX, destY, panelWidth, 1, markerLen);
                 }
 
                 if (panelIndex < panelCount - 1)
                 {
-                    AddHorizontalPanelSeamMarkers(activeLayer, destX, destY + panelHeight - markerLen, panelWidth, 1, markerLen);
+                    AddHorizontalPanelSeamMarkers(activeLayer, panelShapes,
+                        destX, destY + panelHeight - markerLen, panelWidth, 1, markerLen);
                 }
             }
             else
             {
                 if (panelIndex > 0)
                 {
-                    AddVerticalPanelSeamMarkers(activeLayer, destX, destY, panelHeight, 1, markerLen);
+                    AddVerticalPanelSeamMarkers(activeLayer, panelShapes,
+                        destX, destY, panelHeight, 1, markerLen);
                 }
 
                 if (panelIndex < panelCount - 1)
                 {
-                    AddVerticalPanelSeamMarkers(activeLayer, destX + panelWidth - markerLen, destY, panelHeight, 1, markerLen);
+                    AddVerticalPanelSeamMarkers(activeLayer, panelShapes,
+                        destX + panelWidth - markerLen, destY, panelHeight, 1, markerLen);
                 }
             }
         }
