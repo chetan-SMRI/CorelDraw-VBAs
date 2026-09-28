@@ -48,63 +48,64 @@ namespace SMRI.Exporter
                 return;
             }
 
-            string sequenceStyle = PromptForSequenceStyle();
-            if (sequenceStyle == null) return;
+            string sequenceStyle;
+            ExportChoice exportChoice;
+            int dpi;
+            int jpegQuality;
+            string prefix;
+            string suffix;
+            string folderPath;
 
-            ExportChoice exportChoice = PromptForFormat();
-            if (exportChoice == null) return;
-
-            int dpi = 150;
-            if (!exportChoice.IsPdf && !PromptForWholeNumber("Enter export DPI:", 150, 1, 100000, out dpi))
+            using (var form = new ExportOptionsForm(DocumentBaseName(document), ReadSavedExportFolder()))
             {
-                return;
+                if (form.ShowDialog() != DialogResult.OK) return;
+                sequenceStyle = form.SequenceStyle;
+                exportChoice = ExportChoiceFor(form.ExportFormat);
+                dpi = form.Dpi;
+                jpegQuality = form.JpegQuality;
+                prefix = CleanFilePart(form.FilePrefix);
+                suffix = CleanFilePart(form.FileSuffix);
+                SaveExportFolder(form.RememberFolder ? form.BaseFolder : null);
+                folderPath = CreateTimestampedExportFolder(form.BaseFolder);
             }
-
-            int jpegQuality = 100;
-            if (exportChoice.Name == "JPG" &&
-                !PromptForWholeNumber("Enter JPG quality from 1 to 100:", 100, 1, 100, out jpegQuality))
-            {
-                return;
-            }
-
-            string prefix = CleanFilePart(Interaction.InputBox("Enter filename prefix (optional):",
-                ProductName, DocumentBaseName(document)));
-            string suffix = CleanFilePart(Interaction.InputBox("Enter filename suffix (optional):",
-                ProductName, ""));
-
-            string folderPath = ChooseExportFolder();
-            if (folderPath == null) return;
 
             ExportObjects(app, document, selection, exportChoice, sequenceStyle, dpi,
                 jpegQuality, prefix, suffix, folderPath);
         }
 
-        private static string ChooseExportFolder()
+        private static ExportChoice ExportChoiceFor(string format)
         {
-            string baseFolder = ReadSavedExportFolder();
-
-            if (!string.IsNullOrWhiteSpace(baseFolder))
+            switch (format)
             {
-                DialogResult reuse = MessageBox.Show(
-                    "Use this export folder?" + Environment.NewLine + Environment.NewLine + baseFolder,
-                    ProductName, MessageBoxButtons.YesNo, MessageBoxIcon.Question);
-                if (reuse != DialogResult.Yes) baseFolder = null;
+                case "PNG":
+                    return new ExportChoice { Name = "PNG", Extension = ".png", Filter = VGCore.cdrFilter.cdrPNG };
+                case "TIFF":
+                    return new ExportChoice { Name = "TIFF", Extension = ".tif", Filter = VGCore.cdrFilter.cdrTIFF };
+                case "PDF":
+                    return new ExportChoice { Name = "PDF", Extension = ".pdf", IsPdf = true };
+                default:
+                    return new ExportChoice { Name = "JPG", Extension = ".jpg", Filter = VGCore.cdrFilter.cdrJPEG };
             }
+        }
 
-            if (string.IsNullOrWhiteSpace(baseFolder))
+        private static void SaveExportFolder(string baseFolder)
+        {
+            try
             {
-                using (var dialog = new FolderBrowserDialog())
+                if (string.IsNullOrWhiteSpace(baseFolder))
                 {
-                    dialog.Description = "Choose the base export folder";
-                    dialog.ShowNewFolderButton = true;
-                    if (dialog.ShowDialog() != DialogResult.OK) return null;
-                    baseFolder = dialog.SelectedPath;
+                    if (File.Exists(ExportFolderSettingPath)) File.Delete(ExportFolderSettingPath);
+                    return;
                 }
 
                 Directory.CreateDirectory(SettingsDirectory);
                 File.WriteAllText(ExportFolderSettingPath, baseFolder, Encoding.UTF8);
             }
+            catch { }
+        }
 
+        private static string CreateTimestampedExportFolder(string baseFolder)
+        {
             Directory.CreateDirectory(baseFolder);
             string requestedFolder = Path.Combine(baseFolder,
                 DateTime.Now.ToString("dd-MM-yy HH-mm", CultureInfo.InvariantCulture));
