@@ -17,6 +17,9 @@ namespace SMRI.Exporter
         private const string ProductName = "SMRI Exporter";
         private const int CdrInch = 1;
         private const int PdfSelection = 2;
+        private static readonly string SettingsDirectory = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "SMRI", "Exporter");
+        private static readonly string ExportFolderSettingPath = Path.Combine(SettingsDirectory, "export-folder.txt");
 
         private sealed class ExportChoice
         {
@@ -69,17 +72,69 @@ namespace SMRI.Exporter
             string suffix = CleanFilePart(Interaction.InputBox("Enter filename suffix (optional):",
                 ProductName, ""));
 
-            string folderPath;
-            using (var dialog = new FolderBrowserDialog())
-            {
-                dialog.Description = "Choose the export folder";
-                dialog.ShowNewFolderButton = true;
-                if (dialog.ShowDialog() != DialogResult.OK) return;
-                folderPath = dialog.SelectedPath;
-            }
+            string folderPath = ChooseExportFolder();
+            if (folderPath == null) return;
 
             ExportObjects(app, document, selection, exportChoice, sequenceStyle, dpi,
                 jpegQuality, prefix, suffix, folderPath);
+        }
+
+        private static string ChooseExportFolder()
+        {
+            string baseFolder = ReadSavedExportFolder();
+
+            if (!string.IsNullOrWhiteSpace(baseFolder))
+            {
+                DialogResult reuse = MessageBox.Show(
+                    "Use this export folder?" + Environment.NewLine + Environment.NewLine + baseFolder,
+                    ProductName, MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+                if (reuse != DialogResult.Yes) baseFolder = null;
+            }
+
+            if (string.IsNullOrWhiteSpace(baseFolder))
+            {
+                using (var dialog = new FolderBrowserDialog())
+                {
+                    dialog.Description = "Choose the base export folder";
+                    dialog.ShowNewFolderButton = true;
+                    if (dialog.ShowDialog() != DialogResult.OK) return null;
+                    baseFolder = dialog.SelectedPath;
+                }
+
+                Directory.CreateDirectory(SettingsDirectory);
+                File.WriteAllText(ExportFolderSettingPath, baseFolder, Encoding.UTF8);
+            }
+
+            Directory.CreateDirectory(baseFolder);
+            string requestedFolder = Path.Combine(baseFolder,
+                DateTime.Now.ToString("dd-MM-yy HH-mm", CultureInfo.InvariantCulture));
+            string exportFolder = UniqueDirectoryPath(requestedFolder);
+            Directory.CreateDirectory(exportFolder);
+            return exportFolder;
+        }
+
+        private static string ReadSavedExportFolder()
+        {
+            try
+            {
+                return File.Exists(ExportFolderSettingPath)
+                    ? File.ReadAllText(ExportFolderSettingPath, Encoding.UTF8).Trim()
+                    : null;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        private static string UniqueDirectoryPath(string requestedPath)
+        {
+            if (!Directory.Exists(requestedPath)) return requestedPath;
+            for (int copy = 2; ; copy++)
+            {
+                string candidate = requestedPath + " (" + copy.ToString(CultureInfo.InvariantCulture) + ")";
+                if (!Directory.Exists(candidate)) return candidate;
+            }
         }
 
         private static void ExportObjects(dynamic app, dynamic document, dynamic selection,

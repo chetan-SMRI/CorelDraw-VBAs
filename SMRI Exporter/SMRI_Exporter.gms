@@ -138,14 +138,40 @@ End Function
 Private Function ChooseFolder() As String
     Dim shellApp As Object
     Dim folder As Object
+    Dim baseFolder As String
+    Dim requestedFolder As String
+    Dim exportFolder As String
+    Dim copyNumber As Long
 
     On Error GoTo FolderError
-    Set shellApp = CreateObject("Shell.Application")
-    Set folder = shellApp.BrowseForFolder(0, "Choose the export folder", 1)
+    baseFolder = GetSetting("SMRI Exporter", "Export", "BaseFolder", "")
 
-    If Not folder Is Nothing Then
-        ChooseFolder = folder.Self.Path
+    If baseFolder <> "" Then
+        If MsgBox("Use this export folder?" & vbCrLf & vbCrLf & baseFolder, _
+            vbYesNo + vbQuestion, EXPORTER_TITLE) = vbNo Then
+            baseFolder = ""
+        End If
     End If
+
+    If baseFolder = "" Then
+        Set shellApp = CreateObject("Shell.Application")
+        Set folder = shellApp.BrowseForFolder(0, "Choose the base export folder", 1)
+        If folder Is Nothing Then Exit Function
+        baseFolder = folder.Self.Path
+        SaveSetting "SMRI Exporter", "Export", "BaseFolder", baseFolder
+    End If
+
+    requestedFolder = JoinPath(baseFolder, Format$(Now, "dd-mm-yy hh-nn"))
+    exportFolder = requestedFolder
+    copyNumber = 2
+
+    Do While Dir$(exportFolder, vbDirectory) <> ""
+        exportFolder = requestedFolder & " (" & CStr(copyNumber) & ")"
+        copyNumber = copyNumber + 1
+    Loop
+
+    MkDir exportFolder
+    ChooseFolder = exportFolder
     Exit Function
 
 FolderError:
