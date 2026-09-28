@@ -4,5 +4,5 @@ Option Explicit
 Public Sub SMRI_RunExportMaker()
     Dim shell As Object
     Set shell = CreateObject("WScript.Shell")
-    shell.Run """C:\SMRI\SMRIExporter\SMRI.Exporter.exe""", 1, False
+    shell.Run """C:\SMRI\Exporter\SMRI.Exporter.exe""", 1, False
 End Sub
