@@ -11,6 +11,11 @@ namespace SMRI.Exporter
     internal sealed class LicenseManager
     {
         private const string ProductName = "SMRI Exporter";
+        private const string RenewalContact =
+            "To update your license, contact:" + "\n\n" +
+            "Shri Mayanand Research & Innovation Pvt Ltd" + "\n" +
+            "director@shrimayanand.com" + "\n" +
+            "+91 89891 53870";
         private static readonly DateTime Epoch = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
         private static readonly byte[] Entropy = Encoding.UTF8.GetBytes("SMRI.Exporter.OfflineLicense.v1");
         private static readonly string LicenseDirectory = Path.Combine(
@@ -23,11 +28,17 @@ namespace SMRI.Exporter
             {
                 DateTime now = DateTime.UtcNow;
                 DateTime activated, expires, lastSeen;
-                if (TryReadLicense(out activated, out expires, out lastSeen) &&
-                    IsLicenseValid(activated, expires, lastSeen, now))
+                bool existingLicense = TryReadLicense(out activated, out expires, out lastSeen);
+                if (existingLicense && IsLicenseValid(activated, expires, lastSeen, now))
                 {
                     SaveLicense(activated, expires, now > lastSeen ? now : lastSeen);
                     return true;
+                }
+
+                if (existingLicense && now >= expires)
+                {
+                    MessageBox.Show("Your SMRI Exporter license has expired.\n\n" + RenewalContact,
+                        ProductName + " License Expired", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
 
                 string validityText = Interaction.InputBox(
