@@ -37,33 +37,20 @@ namespace SMRI.PanelMaker
                 return;
             }
 
-            double[] mediaWidths = PromptForMediaWidths();
-            if (mediaWidths == null)
+            double[] mediaWidths;
+            bool horizontalCut;
+            double overlap;
+            bool addBleedMarkers;
+
+            using (var form = new PanelMakerOptionsForm())
             {
-                return;
+                if (form.ShowDialog() != DialogResult.OK) return;
+                mediaWidths = form.MediaWidths;
+                horizontalCut = form.HorizontalCut;
+                overlap = form.Overlap;
+                addBleedMarkers = form.AddBleedMarkers;
             }
 
-            bool? horizontalCutValue = PromptForDirection();
-            if (!horizontalCutValue.HasValue)
-            {
-                return;
-            }
-
-            double? overlapValue = PromptForOverlap(mediaWidths[0]);
-            if (!overlapValue.HasValue)
-            {
-                return;
-            }
-
-            bool? addBleedMarkersValue = PromptForBleedMarkers();
-            if (!addBleedMarkersValue.HasValue)
-            {
-                return;
-            }
-
-            bool horizontalCut = horizontalCutValue.Value;
-            double overlap = overlapValue.Value;
-            bool addBleedMarkers = addBleedMarkersValue.Value;
             object oldUnit = document.Unit;
 
             try
@@ -588,7 +575,7 @@ namespace SMRI.PanelMaker
             return text.ToString();
         }
 
-        private static string SavedPresetLabel(int slot)
+        internal static string SavedPresetLabel(int slot)
         {
             string presetName = GetPresetValue(slot, "Name");
             string presetWidths = GetPresetValue(slot, "Widths");
@@ -603,12 +590,12 @@ namespace SMRI.PanelMaker
                 : slot.ToString(CultureInfo.InvariantCulture) + " = " + presetName + " (" + presetWidths + ")";
         }
 
-        private static string LoadPresetWidths(int slot)
+        internal static string LoadPresetWidths(int slot)
         {
             return GetPresetValue(slot, "Widths");
         }
 
-        private static void SavePreset(int slot, string presetName, string presetWidths)
+        internal static void SavePreset(int slot, string presetName, string presetWidths)
         {
             using (RegistryKey key = Registry.CurrentUser.CreateSubKey(@"Software\VB and VBA Program Settings\SMRI\PanelMaker"))
             {
@@ -617,7 +604,7 @@ namespace SMRI.PanelMaker
             }
         }
 
-        private static string GetPresetValue(int slot, string suffix)
+        internal static string GetPresetValue(int slot, string suffix)
         {
             try
             {

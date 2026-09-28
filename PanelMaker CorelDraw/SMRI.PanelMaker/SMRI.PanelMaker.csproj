@@ -38,6 +38,7 @@
     <Reference Include="System.Configuration" />
     <Reference Include="System.Core" />
     <Reference Include="System.Data" />
+    <Reference Include="System.Drawing" />
     <Reference Include="System.Security" />
     <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Xml" />
@@ -45,6 +46,7 @@
   <ItemGroup>
     <Compile Include="CorelPanelMaker.cs" />
     <Compile Include="LicenseManager.cs" />
+    <Compile Include="PanelMakerOptionsForm.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
