@@ -142,13 +142,9 @@ namespace SMRI.Exporter
 
         private void BrowseFolder(object sender, EventArgs e)
         {
-            using (var dialog = new FolderBrowserDialog())
-            {
-                dialog.Description = "Choose the base export folder";
-                dialog.ShowNewFolderButton = true;
-                if (Directory.Exists(folderBox.Text)) dialog.SelectedPath = folderBox.Text;
-                if (dialog.ShowDialog(this) == DialogResult.OK) folderBox.Text = dialog.SelectedPath;
-            }
+            string selectedFolder = ModernFolderPicker.Show(this,
+                "Choose the base export folder", folderBox.Text.Trim());
+            if (!string.IsNullOrWhiteSpace(selectedFolder)) folderBox.Text = selectedFolder;
         }
 
         private void UpdateConditionalFields()
@@ -161,10 +157,9 @@ namespace SMRI.Exporter
         private void UpdatePreview()
         {
             string baseFolder = folderBox.Text.Trim();
-            string timestamp = DateTime.Now.ToString("dd-MM-yy HH-mm", CultureInfo.InvariantCulture);
             destinationPreview.Text = baseFolder.Length == 0
                 ? "Choose a base folder"
-                : Path.Combine(baseFolder, timestamp);
+                : baseFolder;
 
             string sequence = sequenceBox.SelectedIndex == 1 ? "1" :
                 sequenceBox.SelectedIndex == 2 ? "A" : "a";

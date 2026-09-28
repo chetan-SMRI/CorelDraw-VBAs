@@ -48,6 +48,7 @@
     <Compile Include="CorelExporter.cs" />
     <Compile Include="ExportOptionsForm.cs" />
     <Compile Include="LicenseManager.cs" />
+    <Compile Include="ModernFolderPicker.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

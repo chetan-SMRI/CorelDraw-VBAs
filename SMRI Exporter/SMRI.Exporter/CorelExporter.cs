@@ -66,7 +66,7 @@ namespace SMRI.Exporter
                 prefix = CleanFilePart(form.FilePrefix);
                 suffix = CleanFilePart(form.FileSuffix);
                 SaveExportFolder(form.RememberFolder ? form.BaseFolder : null);
-                folderPath = CreateTimestampedExportFolder(form.BaseFolder);
+                folderPath = form.BaseFolder;
             }
 
             ExportObjects(app, document, selection, exportChoice, sequenceStyle, dpi,
@@ -104,16 +104,6 @@ namespace SMRI.Exporter
             catch { }
         }
 
-        private static string CreateTimestampedExportFolder(string baseFolder)
-        {
-            Directory.CreateDirectory(baseFolder);
-            string requestedFolder = Path.Combine(baseFolder,
-                DateTime.Now.ToString("dd-MM-yy HH-mm", CultureInfo.InvariantCulture));
-            string exportFolder = UniqueDirectoryPath(requestedFolder);
-            Directory.CreateDirectory(exportFolder);
-            return exportFolder;
-        }
-
         private static string ReadSavedExportFolder()
         {
             try
@@ -125,16 +115,6 @@ namespace SMRI.Exporter
             catch
             {
                 return null;
-            }
-        }
-
-        private static string UniqueDirectoryPath(string requestedPath)
-        {
-            if (!Directory.Exists(requestedPath)) return requestedPath;
-            for (int copy = 2; ; copy++)
-            {
-                string candidate = requestedPath + " (" + copy.ToString(CultureInfo.InvariantCulture) + ")";
-                if (!Directory.Exists(candidate)) return candidate;
             }
         }
 
