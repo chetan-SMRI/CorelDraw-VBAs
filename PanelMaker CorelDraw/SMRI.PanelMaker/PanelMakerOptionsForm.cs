@@ -15,12 +15,14 @@ namespace SMRI.PanelMaker
         private readonly ComboBox directionBox = new ComboBox();
         private readonly NumericUpDown overlapBox = new NumericUpDown();
         private readonly CheckBox markersBox = new CheckBox();
+        private readonly TextBox customerNameBox = new TextBox();
         private readonly Label summaryLabel = new Label();
 
         internal double[] MediaWidths { get; private set; }
         internal bool HorizontalCut { get; private set; }
         internal double Overlap { get; private set; }
         internal bool AddBleedMarkers { get; private set; }
+        internal string CustomerName { get; private set; }
 
         internal PanelMakerOptionsForm()
         {
@@ -29,7 +31,7 @@ namespace SMRI.PanelMaker
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;
             MinimizeBox = false;
-            ClientSize = new Size(620, 385);
+            ClientSize = new Size(620, 420);
             Font = new Font("Segoe UI", 9F);
 
             var layout = new TableLayoutPanel
@@ -37,7 +39,7 @@ namespace SMRI.PanelMaker
                 Dock = DockStyle.Fill,
                 Padding = new Padding(14),
                 ColumnCount = 3,
-                RowCount = 8
+                RowCount = 9
             };
             layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 130));
             layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
@@ -87,11 +89,12 @@ namespace SMRI.PanelMaker
             AddRow(layout, 4, "Overlap (in)", overlapBox);
             layout.Controls.Add(markersBox, 1, 5);
             layout.SetColumnSpan(markersBox, 2);
+            AddRow(layout, 6, "Customer (optional)", customerNameBox);
 
             summaryLabel.AutoSize = true;
             summaryLabel.ForeColor = Color.DimGray;
             summaryLabel.MaximumSize = new Size(450, 0);
-            AddRow(layout, 6, "Configuration", summaryLabel);
+            AddRow(layout, 7, "Configuration", summaryLabel);
 
             var buttons = new FlowLayoutPanel
             {
@@ -104,7 +107,7 @@ namespace SMRI.PanelMaker
             createButton.Click += AcceptOptions;
             buttons.Controls.Add(createButton);
             buttons.Controls.Add(cancelButton);
-            layout.Controls.Add(buttons, 1, 7);
+            layout.Controls.Add(buttons, 1, 8);
             layout.SetColumnSpan(buttons, 2);
             AcceptButton = createButton;
             CancelButton = cancelButton;
@@ -207,6 +210,7 @@ namespace SMRI.PanelMaker
             HorizontalCut = directionBox.SelectedIndex == 1;
             Overlap = overlap;
             AddBleedMarkers = markersBox.Checked;
+            CustomerName = customerNameBox.Text.Trim();
             DialogResult = DialogResult.OK;
             Close();
         }

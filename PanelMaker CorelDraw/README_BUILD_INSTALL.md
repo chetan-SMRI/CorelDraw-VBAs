@@ -62,6 +62,9 @@ msbuild SMRI.PanelMaker.sln /p:Configuration=Release /p:Platform="Any CPU"
 C:\SMRI\PanelMaker\SMRI.PanelMaker.exe
 ```
 
+The form includes an optional customer name. When supplied, it is appended to every
+panel caption after a `|`; leaving it blank keeps the original captions unchanged.
+
 Do not run CorelDRAW or Panel Maker as administrator unless both programs are running as administrator.
 
 On first use, Panel Maker asks how many days the license should remain valid and then asks for an 8-digit activation code. Generate the code from the project folder with:

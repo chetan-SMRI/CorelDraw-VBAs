@@ -21,6 +21,12 @@ Keep the EXE and config file together.
 2. Select the objects to export.
 3. Run `SMRI.Exporter.exe` normally.
 
+The export form includes an optional customer name. When supplied, each exported
+object gets a temporary top caption such as `Matt Vinyl 23x36 | Subham Enterprises`,
+using the filename prefix and the object's dimensions. The temporary CorelDRAW text
+is removed after that file is exported. Leaving the field blank exports exactly as
+before, without adding a caption.
+
 CorelDRAW and SMRI Exporter must use the same Windows permission level. Normally, neither should use **Run as administrator**.
 
 On first use, enter the license duration in days and then the current 8-digit activation code. The license is stored separately from Panel Maker at:

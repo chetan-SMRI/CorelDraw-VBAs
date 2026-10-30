@@ -54,6 +54,7 @@ namespace SMRI.Exporter
             int jpegQuality;
             string prefix;
             string suffix;
+            string customerName;
             string folderPath;
 
             using (var form = new ExportOptionsForm(DocumentBaseName(document), ReadSavedExportFolder()))
@@ -65,12 +66,13 @@ namespace SMRI.Exporter
                 jpegQuality = form.JpegQuality;
                 prefix = CleanFilePart(form.FilePrefix);
                 suffix = CleanFilePart(form.FileSuffix);
+                customerName = form.CustomerName;
                 SaveExportFolder(form.RememberFolder ? form.BaseFolder : null);
                 folderPath = form.BaseFolder;
             }
 
             ExportObjects(app, document, selection, exportChoice, sequenceStyle, dpi,
-                jpegQuality, prefix, suffix, folderPath);
+                jpegQuality, prefix, suffix, folderPath, customerName);
         }
 
         private static ExportChoice ExportChoiceFor(string format)
@@ -120,7 +122,7 @@ namespace SMRI.Exporter
 
         private static void ExportObjects(dynamic app, dynamic document, dynamic selection,
             ExportChoice exportChoice, string sequenceStyle, int dpi, int jpegQuality,
-            string prefix, string suffix, string folderPath)
+            string prefix, string suffix, string folderPath, string customerName)
         {
             dynamic originals = selection.All();
             int count = originals.Count;
@@ -165,10 +167,31 @@ namespace SMRI.Exporter
                     string fileName = BuildFileName(sequence, prefix, width, height,
                         suffix, exportChoice.Extension);
                     string filePath = UniqueFilePath(Path.Combine(folderPath, fileName));
+                    dynamic exportLabel = null;
 
                     try
                     {
-                        shape.CreateSelection();
+                        if (!string.IsNullOrWhiteSpace(customerName))
+                        {
+                            string labelText = (string.IsNullOrWhiteSpace(prefix)
+                                ? "" : prefix + " ") + FormatInches(width) + "x" +
+                                FormatInches(height) + " | " + customerName;
+                            exportLabel = document.ActiveLayer.CreateArtisticText(x, y + height + 0.14,
+                                labelText);
+                            exportLabel.Text.Story.Size = 18;
+                            exportLabel.Text.Story.Font = "Arial";
+                            exportLabel.Text.Story.Bold = true;
+
+                            dynamic exportRange = app.CreateShapeRange();
+                            exportRange.Add(shape);
+                            exportRange.Add(exportLabel);
+                            exportRange.CreateSelection();
+                        }
+                        else
+                        {
+                            shape.CreateSelection();
+                        }
+
                         if (exportChoice.IsPdf)
                         {
                             document.PublishToPDF(filePath);
@@ -184,6 +207,13 @@ namespace SMRI.Exporter
                     {
                         failedCount++;
                         failures.AppendLine(i + ": " + fileName + " - " + ex.Message);
+                    }
+                    finally
+                    {
+                        if (exportLabel != null)
+                        {
+                            try { exportLabel.Delete(); } catch { }
+                        }
                     }
 
                     app.Status.SetProgressMessage(i + "/" + count + " exported");

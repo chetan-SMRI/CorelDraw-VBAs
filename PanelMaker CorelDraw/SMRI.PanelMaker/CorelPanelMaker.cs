@@ -41,6 +41,7 @@ namespace SMRI.PanelMaker
             bool horizontalCut;
             double overlap;
             bool addBleedMarkers;
+            string customerName;
 
             using (var form = new PanelMakerOptionsForm())
             {
@@ -49,6 +50,7 @@ namespace SMRI.PanelMaker
                 horizontalCut = form.HorizontalCut;
                 overlap = form.Overlap;
                 addBleedMarkers = form.AddBleedMarkers;
+                customerName = form.CustomerName;
             }
 
             object oldUnit = document.Unit;
@@ -56,7 +58,8 @@ namespace SMRI.PanelMaker
             try
             {
                 document.Unit = CdrInch;
-                CreatePanels(app, document, selection, mediaWidths, overlap, horizontalCut, addBleedMarkers);
+                CreatePanels(app, document, selection, mediaWidths, overlap, horizontalCut,
+                    addBleedMarkers, customerName);
             }
             finally
             {
@@ -64,7 +67,9 @@ namespace SMRI.PanelMaker
             }
         }
 
-        private static void CreatePanels(dynamic app, dynamic document, dynamic source, double[] mediaWidths, double overlap, bool horizontalCut, bool addBleedMarkers)
+        private static void CreatePanels(dynamic app, dynamic document, dynamic source,
+            double[] mediaWidths, double overlap, bool horizontalCut, bool addBleedMarkers,
+            string customerName)
         {
             double x = 0;
             double y = 0;
@@ -138,11 +143,15 @@ namespace SMRI.PanelMaker
 
                         double horizontalLabelX = destX - 0.35;
                         double horizontalLabelY = destY;
-                        dynamic label = activeLayer.CreateArtisticText(horizontalLabelX, horizontalLabelY,
-                            "Part " + (i + 1) +
+                        string horizontalLabelText = "Part " + (i + 1) +
                             " | Size: " + FormatInches(width) + "\"x" + FormatInches(height) + "\"" +
                             " | Part Height: " + FormatInches(panelHeight) + "\"" +
-                            " | Overlap " + FormatInches(overlap) + "\"");
+                            " | Overlap " + FormatInches(overlap) + "\"";
+                        if (!string.IsNullOrWhiteSpace(customerName))
+                            horizontalLabelText += " | " + customerName;
+
+                        dynamic label = activeLayer.CreateArtisticText(horizontalLabelX, horizontalLabelY,
+                            horizontalLabelText);
 
                         label.Text.Story.Size = 18;
                         label.Text.Story.Font = "Arial";
@@ -193,11 +202,15 @@ namespace SMRI.PanelMaker
                                 i, panelWidths.Length, false, overlap);
                         }
 
-                        dynamic label = activeLayer.CreateArtisticText(destX, startY + height + 0.14,
-                            "Part " + (i + 1) +
+                        string verticalLabelText = "Part " + (i + 1) +
                             " | Size: " + FormatInches(width) + "\"x" + FormatInches(height) + "\"" +
                             " | Part Width: " + FormatInches(panelWidth) + "\"" +
-                            " | Overlap " + FormatInches(overlap) + "\"");
+                            " | Overlap " + FormatInches(overlap) + "\"";
+                        if (!string.IsNullOrWhiteSpace(customerName))
+                            verticalLabelText += " | " + customerName;
+
+                        dynamic label = activeLayer.CreateArtisticText(destX, startY + height + 0.14,
+                            verticalLabelText);
 
                         label.Text.Story.Size = 18;
                         label.Text.Story.Font = "Arial";
