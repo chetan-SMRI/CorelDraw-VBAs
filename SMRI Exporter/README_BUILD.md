@@ -24,8 +24,9 @@ Keep the EXE and config file together.
 The export form includes an optional customer name. When supplied, each exported
 object gets a temporary top caption such as `Matt Vinyl 23x36 | Subham Enterprises`,
 using the filename prefix and the object's dimensions. The temporary CorelDRAW text
-is removed after that file is exported. Leaving the field blank exports exactly as
-before, without adding a caption.
+is removed after that file is exported. The customer name is also used as the filename
+suffix. Leaving the field blank exports exactly as before, without adding a caption
+or suffix.
 
 CorelDRAW and SMRI Exporter must use the same Windows permission level. Normally, neither should use **Run as administrator**.
 

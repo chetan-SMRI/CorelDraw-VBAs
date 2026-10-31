@@ -65,8 +65,8 @@ namespace SMRI.Exporter
                 dpi = form.Dpi;
                 jpegQuality = form.JpegQuality;
                 prefix = CleanFilePart(form.FilePrefix);
-                suffix = CleanFilePart(form.FileSuffix);
                 customerName = form.CustomerName;
+                suffix = CleanFilePart(customerName);
                 SaveExportFolder(form.RememberFolder ? form.BaseFolder : null);
                 folderPath = form.BaseFolder;
             }

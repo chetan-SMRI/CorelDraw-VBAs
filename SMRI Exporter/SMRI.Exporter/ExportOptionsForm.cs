@@ -13,7 +13,6 @@ namespace SMRI.Exporter
         private readonly NumericUpDown dpiBox = new NumericUpDown();
         private readonly NumericUpDown qualityBox = new NumericUpDown();
         private readonly TextBox prefixBox = new TextBox();
-        private readonly TextBox suffixBox = new TextBox();
         private readonly TextBox customerNameBox = new TextBox();
         private readonly TextBox folderBox = new TextBox();
         private readonly CheckBox rememberFolderBox = new CheckBox();
@@ -25,7 +24,6 @@ namespace SMRI.Exporter
         internal int Dpi { get; private set; }
         internal int JpegQuality { get; private set; }
         internal string FilePrefix { get; private set; }
-        internal string FileSuffix { get; private set; }
         internal string CustomerName { get; private set; }
         internal string BaseFolder { get; private set; }
         internal bool RememberFolder { get; private set; }
@@ -38,7 +36,7 @@ namespace SMRI.Exporter
             MaximizeBox = false;
             MinimizeBox = false;
             ShowInTaskbar = true;
-            ClientSize = new Size(610, 490);
+            ClientSize = new Size(610, 455);
             Font = new Font("Segoe UI", 9F);
 
             var layout = new TableLayoutPanel
@@ -46,7 +44,7 @@ namespace SMRI.Exporter
                 Dock = DockStyle.Fill,
                 Padding = new Padding(14),
                 ColumnCount = 3,
-                RowCount = 12
+                RowCount = 11
             };
             layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 125));
             layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
@@ -70,17 +68,16 @@ namespace SMRI.Exporter
             AddRow(layout, 2, "DPI", dpiBox);
             AddRow(layout, 3, "JPG quality", qualityBox);
             AddRow(layout, 4, "Filename prefix", prefixBox);
-            AddRow(layout, 5, "Filename suffix", suffixBox);
-            AddRow(layout, 6, "Customer (optional)", customerNameBox);
+            AddRow(layout, 5, "Customer (optional)", customerNameBox);
 
             folderBox.Dock = DockStyle.Fill;
-            layout.Controls.Add(new Label { Text = "Base folder", AutoSize = true, Anchor = AnchorStyles.Left }, 0, 7);
-            layout.Controls.Add(folderBox, 1, 7);
+            layout.Controls.Add(new Label { Text = "Base folder", AutoSize = true, Anchor = AnchorStyles.Left }, 0, 6);
+            layout.Controls.Add(folderBox, 1, 6);
             var browseButton = new Button { Text = "Browse...", Dock = DockStyle.Fill };
             browseButton.Click += BrowseFolder;
-            layout.Controls.Add(browseButton, 2, 7);
+            layout.Controls.Add(browseButton, 2, 6);
 
-            layout.Controls.Add(rememberFolderBox, 1, 8);
+            layout.Controls.Add(rememberFolderBox, 1, 7);
             layout.SetColumnSpan(rememberFolderBox, 2);
 
             destinationPreview.AutoSize = true;
@@ -89,8 +86,8 @@ namespace SMRI.Exporter
             filePreview.AutoSize = true;
             filePreview.MaximumSize = new Size(440, 0);
             filePreview.ForeColor = Color.DimGray;
-            AddRow(layout, 9, "Export folder", destinationPreview);
-            AddRow(layout, 10, "Example file", filePreview);
+            AddRow(layout, 8, "Export folder", destinationPreview);
+            AddRow(layout, 9, "Example file", filePreview);
 
             var buttons = new FlowLayoutPanel
             {
@@ -103,7 +100,7 @@ namespace SMRI.Exporter
             exportButton.Click += AcceptOptions;
             buttons.Controls.Add(exportButton);
             buttons.Controls.Add(cancelButton);
-            layout.Controls.Add(buttons, 1, 11);
+            layout.Controls.Add(buttons, 1, 10);
             layout.SetColumnSpan(buttons, 2);
             AcceptButton = exportButton;
             CancelButton = cancelButton;
@@ -111,7 +108,7 @@ namespace SMRI.Exporter
             formatBox.SelectedIndexChanged += delegate { UpdateConditionalFields(); UpdatePreview(); };
             sequenceBox.SelectedIndexChanged += delegate { UpdatePreview(); };
             prefixBox.TextChanged += delegate { UpdatePreview(); };
-            suffixBox.TextChanged += delegate { UpdatePreview(); };
+            customerNameBox.TextChanged += delegate { UpdatePreview(); };
             folderBox.TextChanged += delegate { UpdatePreview(); };
             UpdateConditionalFields();
             UpdatePreview();
@@ -167,11 +164,11 @@ namespace SMRI.Exporter
             string sequence = sequenceBox.SelectedIndex == 1 ? "1" :
                 sequenceBox.SelectedIndex == 2 ? "A" : "a";
             string prefix = prefixBox.Text.Trim();
-            string suffix = suffixBox.Text.Trim();
+            string customerName = customerNameBox.Text.Trim();
             string extension = "." + Convert.ToString(formatBox.SelectedItem,
                 CultureInfo.InvariantCulture).ToLowerInvariant().Replace("tiff", "tif");
             filePreview.Text = sequence + (prefix.Length == 0 ? "" : " " + prefix) +
-                " 24x36 Inch" + (suffix.Length == 0 ? "" : " " + suffix) + extension;
+                " 24x36 Inch" + (customerName.Length == 0 ? "" : " " + customerName) + extension;
         }
 
         private void AcceptOptions(object sender, EventArgs e)
@@ -201,7 +198,6 @@ namespace SMRI.Exporter
             Dpi = Decimal.ToInt32(dpiBox.Value);
             JpegQuality = Decimal.ToInt32(qualityBox.Value);
             FilePrefix = prefixBox.Text;
-            FileSuffix = suffixBox.Text;
             CustomerName = customerNameBox.Text.Trim();
             BaseFolder = folder;
             RememberFolder = rememberFolderBox.Checked;
