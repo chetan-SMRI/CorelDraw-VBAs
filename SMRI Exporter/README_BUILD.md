@@ -30,6 +30,9 @@ or suffix.
 
 CorelDRAW and SMRI Exporter must use the same Windows permission level. Normally, neither should use **Run as administrator**.
 
+Raster export uses late-bound CorelDRAW automation so the EXE is not tied to the
+exact `IVGDocument` interface ID of the CorelDRAW version used to build it.
+
 On first use, enter the license duration in days and then the current 8-digit activation code. The license is stored separately from Panel Maker at:
 
 ```text
