@@ -263,10 +263,8 @@ namespace SMRI.Exporter
         private static void ExportRaster(dynamic document, string filePath,
             ExportChoice choice, int dpi, int jpegQuality)
         {
-            // Keep the document late-bound. CorelDRAW changes the IVGDocument COM
-            // interface ID between some releases, so casting here can reject a
-            // perfectly valid document opened by another supported version.
-            dynamic exportFilter = document.ExportBitmap(filePath, choice.Filter,
+            VGCore.IVGDocument typedDocument = (VGCore.IVGDocument)document;
+            dynamic exportFilter = typedDocument.ExportBitmap(filePath, choice.Filter,
                 VGCore.cdrExportRange.cdrSelection, VGCore.cdrImageType.cdrRGBColorImage,
                 0, 0, dpi, dpi);
 
